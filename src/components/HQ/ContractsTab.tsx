@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import type { Contract, RocketModel, BoosterInventoryItem } from '../../types/game';
-import { ArrowUpRight, DollarSign, Atom, Weight, Satellite, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { ArrowUpRight, Atom, Weight, Satellite, AlertTriangle, ShieldCheck, X } from 'lucide-react';
 import { sounds } from '../../utils/audio';
 
 interface ContractsTabProps {
@@ -18,20 +18,33 @@ export const ContractsTab: React.FC<ContractsTabProps> = ({
   cash,
   onInitiateLaunch,
 }) => {
-  const [selectedContract, setSelectedContract] = React.useState<Contract | null>(null);
-  const [selectedRocketId, setSelectedRocketId] = React.useState<string>('');
-  const [selectedBoosterId, setSelectedBoosterId] = React.useState<string>('');
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+  const [filter, setFilter] = useState<'all' | 'constellation' | 'heavy'>('all');
 
-  // Default select first available rocket
-  React.useEffect(() => {
-    if (!selectedRocketId && rockets.length > 0) {
-      const unlocked = rockets.find(r => r.unlocked);
-      if (unlocked) setSelectedRocketId(unlocked.id);
+  // Find first unlocked rocket as default selection
+  const defaultRocketId = useMemo(() => {
+    const unlocked = rockets.find(r => r.unlocked);
+    return unlocked ? unlocked.id : '';
+  }, [rockets]);
+
+  const [selectedRocketId, setSelectedRocketId] = useState<string>(defaultRocketId);
+  const [selectedBoosterId, setSelectedBoosterId] = useState<string>('');
+
+  // Active rocket
+  const activeRocketId = selectedRocketId || defaultRocketId;
+  const currentRocket = rockets.find(r => r.id === activeRocketId);
+  const availableBoosters = hangarBoosters.filter(b => b.rocketId === activeRocketId);
+
+  // Filtered contracts
+  const filteredContracts = useMemo(() => {
+    if (filter === 'constellation') {
+      return contracts.filter(c => c.isConstellationMission);
     }
-  }, [rockets, selectedRocketId]);
-
-  const currentRocket = rockets.find(r => r.id === selectedRocketId);
-  const availableBoosters = hangarBoosters.filter(b => b.rocketId === selectedRocketId);
+    if (filter === 'heavy') {
+      return contracts.filter(c => c.payloadMassKg >= 15000);
+    }
+    return contracts;
+  }, [contracts, filter]);
 
   // Calculate launch cost based on whether reusing a booster
   const getLaunchCost = () => {
@@ -54,79 +67,97 @@ export const ContractsTab: React.FC<ContractsTabProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Intro Header */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-slate-900/60 p-5 rounded-xl border border-slate-800">
+    <div className="space-y-4">
+      {/* Header and Filter Pills */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/60 p-3.5 sm:p-4 rounded-xl border border-slate-800">
         <div>
-          <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
-            Commercial & Defense Manifest
+          <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+            Mission Contracts Manifest
           </h2>
-          <p className="text-sm text-slate-400 mt-1">
-            Contract client payloads to generate treasury revenue and expand your global satellite network.
+          <p className="text-xs text-slate-400 mt-0.5">
+            Accept payloads to earn treasury bounty and launch orbital nodes.
           </p>
         </div>
-        <div className="text-xs text-slate-400 bg-slate-950/80 px-3 py-2 rounded-lg border border-slate-800 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-          Telemetry Relay: <span className="text-cyan-300 font-mono">ONLINE</span>
+
+        {/* Filter Chips */}
+        <div className="flex items-center gap-1.5 self-start sm:self-auto bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs font-mono">
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+              filter === 'all' ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            All ({contracts.length})
+          </button>
+          <button
+            onClick={() => setFilter('constellation')}
+            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
+              filter === 'constellation' ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Satellite className="w-3 h-3 text-cyan-400" /> Constellation
+          </button>
+          <button
+            onClick={() => setFilter('heavy')}
+            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+              filter === 'heavy' ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Heavy Lift
+          </button>
         </div>
       </div>
 
       {/* Contract Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {contracts.map(contract => {
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {filteredContracts.map(contract => {
           const isSelected = selectedContract?.id === contract.id;
           return (
             <div
               key={contract.id}
               onClick={() => {
                 setSelectedContract(contract);
-                sounds.playBeep(520, 0.06);
+                sounds.playBeep(520, 0.05);
               }}
-              className={`relative cursor-pointer transition-all duration-200 p-5 rounded-xl border flex flex-col justify-between ${
+              className={`relative cursor-pointer transition-all p-3.5 sm:p-4 rounded-xl border flex flex-col justify-between ${
                 isSelected
-                  ? 'bg-slate-800/90 border-cyan-500 shadow-lg shadow-cyan-500/10 ring-1 ring-cyan-500'
-                  : 'bg-slate-900/40 border-slate-800 hover:border-slate-700 hover:bg-slate-800/40'
+                  ? 'bg-slate-800/90 border-cyan-500 shadow-md ring-1 ring-cyan-500'
+                  : 'bg-slate-900/50 border-slate-800 hover:border-slate-700 hover:bg-slate-800/40'
               }`}
             >
               {contract.isConstellationMission && (
-                <div className="absolute -top-2.5 right-4 bg-gradient-to-r from-cyan-600 to-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
+                <div className="absolute top-3 right-3 bg-gradient-to-r from-cyan-600 to-indigo-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
                   <Satellite className="w-3 h-3" />
                   Constellation Node
                 </div>
               )}
 
               <div>
-                <div className="text-xs font-mono text-cyan-400 font-semibold uppercase tracking-wider">
+                <div className="text-[11px] font-mono text-cyan-400 font-semibold uppercase tracking-wider">
                   {contract.client}
                 </div>
-                <h3 className="text-base font-bold text-white mt-1 leading-snug">{contract.title}</h3>
-                <p className="text-xs text-slate-400 mt-2 line-clamp-2 leading-relaxed">{contract.description}</p>
+                <h3 className="text-sm sm:text-base font-bold text-white mt-0.5 leading-snug">
+                  {contract.title}
+                </h3>
+                <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                  {contract.description}
+                </p>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-slate-800/80 space-y-2">
-                <div className="flex items-center justify-between text-xs font-mono">
-                  <span className="text-slate-400 flex items-center gap-1">
-                    <Weight className="w-3.5 h-3.5 text-slate-500" /> Payload
-                  </span>
-                  <span className="font-semibold text-slate-200">
+              <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-3 font-mono">
+                  <span className="text-slate-400 flex items-center gap-1 text-[11px]">
+                    <Weight className="w-3 h-3 text-slate-500" />
                     {contract.payloadMassKg.toLocaleString()} kg
                   </span>
+                  <span className="text-purple-300 flex items-center gap-0.5 text-[11px]">
+                    <Atom className="w-3 h-3 text-purple-400" />
+                    +{contract.rewardScience} sci
+                  </span>
                 </div>
 
-                <div className="flex items-center justify-between text-xs font-mono">
-                  <span className="text-slate-400 flex items-center gap-1">
-                    <Atom className="w-3.5 h-3.5 text-purple-400" /> Science Reward
-                  </span>
-                  <span className="font-semibold text-purple-300">+{contract.rewardScience} PTS</span>
-                </div>
-
-                <div className="flex items-center justify-between text-sm font-mono-numbers">
-                  <span className="text-slate-400 flex items-center gap-1 text-xs">
-                    <DollarSign className="w-3.5 h-3.5 text-emerald-400" /> Contract Bounty
-                  </span>
-                  <span className="font-bold text-emerald-400 text-base">
-                    ${contract.rewardCash.toLocaleString()}
-                  </span>
+                <div className="font-mono-numbers font-bold text-emerald-400 text-sm">
+                  ${contract.rewardCash.toLocaleString()}
                 </div>
               </div>
             </div>
@@ -134,41 +165,41 @@ export const ContractsTab: React.FC<ContractsTabProps> = ({
         })}
       </div>
 
-      {/* Flight Preparation Drawer if Contract is Selected */}
+      {/* Flight Preparation Drawer / Modal */}
       {selectedContract && (
-        <div className="bg-slate-900 border border-cyan-500/40 rounded-xl p-6 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none"></div>
-
-          <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-5">
+        <div className="fixed inset-x-0 bottom-0 sm:static bg-slate-900 border-t sm:border border-cyan-500/50 sm:rounded-2xl p-4 sm:p-6 shadow-2xl z-50 max-h-[85vh] sm:max-h-none overflow-y-auto">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
             <div>
-              <div className="text-xs font-mono text-cyan-400 uppercase tracking-widest">Selected Payload</div>
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <div className="text-[10px] font-mono text-cyan-400 uppercase tracking-widest">
+                Payload Selected
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
                 {selectedContract.title}
                 <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">
-                  {selectedContract.payloadMassKg} kg
+                  {selectedContract.payloadMassKg.toLocaleString()} kg
                 </span>
               </h3>
             </div>
             <button
               onClick={() => setSelectedContract(null)}
-              className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded bg-slate-800 cursor-pointer"
+              className="p-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white cursor-pointer"
             >
-              Cancel
+              <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Rocket Selection & Booster Reuse selector */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Rocket Model Picker */}
             <div>
-              <label className="block text-xs font-mono uppercase text-slate-400 mb-2">
-                Select Launch Vehicle
+              <label className="block text-[11px] font-mono uppercase text-slate-400 mb-2">
+                1. Select Rocket Vehicle
               </label>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {rockets
                   .filter(r => r.unlocked)
                   .map(rocket => {
-                    const isSelected = selectedRocketId === rocket.id;
+                    const isSelected = activeRocketId === rocket.id;
                     const canCarry = rocket.payloadCapacityKg >= selectedContract.payloadMassKg;
                     return (
                       <div
@@ -177,24 +208,24 @@ export const ContractsTab: React.FC<ContractsTabProps> = ({
                           setSelectedRocketId(rocket.id);
                           setSelectedBoosterId('');
                         }}
-                        className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center justify-between ${
+                        className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-center justify-between ${
                           isSelected
-                            ? 'bg-slate-800 border-cyan-500 shadow-md'
+                            ? 'bg-slate-800 border-cyan-500 shadow-sm'
                             : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
                         }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{rocket.icon}</span>
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-xl">{rocket.icon}</span>
                           <div>
-                            <div className="font-semibold text-white text-sm">{rocket.name}</div>
-                            <div className="text-xs text-slate-400 font-mono">
-                              Payload Cap: {rocket.payloadCapacityKg.toLocaleString()} kg
+                            <div className="font-semibold text-white text-xs sm:text-sm">{rocket.name}</div>
+                            <div className="text-[11px] text-slate-400 font-mono">
+                              Cap: {rocket.payloadCapacityKg.toLocaleString()} kg
                             </div>
                           </div>
                         </div>
 
                         {!canCarry && (
-                          <div className="text-[11px] font-mono text-rose-400 flex items-center gap-1 bg-rose-950/40 px-2 py-1 rounded border border-rose-900/50">
+                          <div className="text-[10px] font-mono text-rose-400 flex items-center gap-1 bg-rose-950/40 px-1.5 py-0.5 rounded border border-rose-900/50">
                             <AlertTriangle className="w-3 h-3" /> Under-capacity
                           </div>
                         )}
@@ -206,36 +237,35 @@ export const ContractsTab: React.FC<ContractsTabProps> = ({
 
             {/* Booster Reusability / Refurbished unit picker */}
             <div>
-              <label className="block text-xs font-mono uppercase text-slate-400 mb-2">
-                Booster Core Source
+              <label className="block text-[11px] font-mono uppercase text-slate-400 mb-2">
+                2. Booster Core Source
               </label>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {/* Brand new rocket option */}
                 <div
                   onClick={() => setSelectedBoosterId('')}
-                  className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center justify-between ${
+                  className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-center justify-between ${
                     selectedBoosterId === ''
-                      ? 'bg-slate-800 border-cyan-500 shadow-md'
+                      ? 'bg-slate-800 border-cyan-500 shadow-sm'
                       : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
                   }`}
                 >
                   <div>
-                    <div className="text-sm font-semibold text-white">Manufacture Brand New Core</div>
-                    <div className="text-xs text-slate-400 font-mono">Fresh factory build, 100% integrity</div>
+                    <div className="text-xs sm:text-sm font-semibold text-white">Brand New Booster Core</div>
+                    <div className="text-[10px] text-slate-400 font-mono">Fresh build, 100% integrity</div>
                   </div>
                   <div className="text-right font-mono-numbers">
-                    <div className="text-sm font-bold text-slate-200">
+                    <div className="text-xs sm:text-sm font-bold text-slate-200">
                       ${currentRocket ? currentRocket.cost.toLocaleString() : 0}
                     </div>
-                    <div className="text-[10px] text-slate-500">Standard Cost</div>
                   </div>
                 </div>
 
                 {/* Available recovered boosters in hangar */}
                 {availableBoosters.length === 0 ? (
-                  <div className="p-3 rounded-lg border border-dashed border-slate-800 text-center text-xs text-slate-500 font-mono">
-                    No recovered {currentRocket?.name} boosters in stock. Land a booster to unlock 65%+ flight savings!
+                  <div className="p-2.5 rounded-lg border border-dashed border-slate-800 text-center text-[11px] text-slate-500 font-mono">
+                    No recovered {currentRocket?.name} boosters in stock. Land a booster to unlock re-flight discounts!
                   </div>
                 ) : (
                   availableBoosters.map(booster => {
@@ -247,28 +277,30 @@ export const ContractsTab: React.FC<ContractsTabProps> = ({
                       <div
                         key={booster.id}
                         onClick={() => setSelectedBoosterId(booster.id)}
-                        className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center justify-between ${
+                        className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-center justify-between ${
                           isSelected
-                            ? 'bg-emerald-950/50 border-emerald-500 shadow-md'
+                            ? 'bg-emerald-950/50 border-emerald-500 shadow-sm'
                             : 'bg-slate-950/60 border-slate-800 hover:border-emerald-800/40'
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
                           <div>
-                            <div className="text-sm font-semibold text-white font-mono">
-                              Booster #{booster.id} ({booster.flightsCompleted} flights)
+                            <div className="text-xs sm:text-sm font-semibold text-white font-mono">
+                              #{booster.id} ({booster.flightsCompleted} flights)
                             </div>
-                            <div className="text-xs text-emerald-400 font-mono">
-                              Refurbished & Flight Ready ({booster.condition}% integrity)
+                            <div className="text-[10px] text-emerald-400 font-mono">
+                              {booster.condition}% integrity
                             </div>
                           </div>
                         </div>
 
                         <div className="text-right font-mono-numbers">
-                          <div className="text-sm font-bold text-emerald-400">${reuseCost.toLocaleString()}</div>
-                          <div className="text-[10px] text-emerald-500 font-semibold uppercase">
-                            Reuse Discount ({Math.round((1 - (currentRocket?.refurbishCostPercent || 0)) * 100)}% OFF)
+                          <div className="text-xs sm:text-sm font-bold text-emerald-400">
+                            ${reuseCost.toLocaleString()}
+                          </div>
+                          <div className="text-[9px] text-emerald-500 font-semibold uppercase">
+                            Reused Discount
                           </div>
                         </div>
                       </div>
@@ -280,17 +312,17 @@ export const ContractsTab: React.FC<ContractsTabProps> = ({
           </div>
 
           {/* Bottom Action Bar */}
-          <div className="mt-6 pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-6 font-mono text-sm">
+          <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-4 font-mono text-xs">
               <div>
-                <span className="text-xs text-slate-400 block">Launch Expense:</span>
-                <span className={`font-bold font-mono-numbers text-base ${canAfford ? 'text-white' : 'text-rose-400'}`}>
+                <span className="text-[10px] text-slate-400 block">Launch Cost:</span>
+                <span className={`font-bold font-mono-numbers ${canAfford ? 'text-white' : 'text-rose-400'}`}>
                   ${currentCost.toLocaleString()}
                 </span>
               </div>
               <div>
-                <span className="text-xs text-slate-400 block">Net Expected Profit:</span>
-                <span className="font-bold font-mono-numbers text-emerald-400 text-base">
+                <span className="text-[10px] text-slate-400 block">Net Profit:</span>
+                <span className="font-bold font-mono-numbers text-emerald-400">
                   +${(selectedContract.rewardCash - currentCost).toLocaleString()}
                 </span>
               </div>
@@ -299,14 +331,14 @@ export const ContractsTab: React.FC<ContractsTabProps> = ({
             <button
               disabled={!canAfford || !canCarryPayload}
               onClick={handleLaunchClick}
-              className={`px-8 py-3.5 rounded-xl font-bold font-mono tracking-wider flex items-center gap-2 shadow-lg transition-all ${
+              className={`px-5 sm:px-7 py-2.5 sm:py-3 rounded-xl font-bold font-mono text-xs sm:text-sm tracking-wider flex items-center gap-1.5 shadow-lg transition-all ${
                 canAfford && canCarryPayload
                   ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-400 hover:to-blue-500 shadow-cyan-500/25 cursor-pointer active:scale-95'
                   : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
               }`}
             >
               <span>GO FOR LAUNCH</span>
-              <ArrowUpRight className="w-5 h-5" />
+              <ArrowUpRight className="w-4 h-4" />
             </button>
           </div>
         </div>

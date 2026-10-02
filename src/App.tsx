@@ -15,19 +15,50 @@ import { sounds } from './utils/audio';
 
 const STORAGE_KEY = 'spacey_save_v1';
 
+interface SavedState {
+  cash?: number;
+  science?: number;
+  satellites?: number;
+  rockets?: RocketModel[];
+  contracts?: Contract[];
+  hangarBoosters?: BoosterInventoryItem[];
+  techTree?: TechUpgrade[];
+  stats?: MissionStats;
+}
+
+const getSavedData = (): SavedState | null => {
+  try {
+    if (typeof window === 'undefined') return null;
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+let initialLoadedSave: SavedState | null | undefined;
+const getInitialSave = (): SavedState | null => {
+  if (initialLoadedSave === undefined) {
+    initialLoadedSave = getSavedData();
+  }
+  return initialLoadedSave;
+};
+
 export function App() {
-  const [cash, setCash] = useState<number>(450000);
-  const [science, setScience] = useState<number>(15);
-  const [satellites, setSatellites] = useState<number>(0);
+  const initial = getInitialSave();
+
+  const [cash, setCash] = useState<number>(() => initial?.cash ?? 450000);
+  const [science, setScience] = useState<number>(() => initial?.science ?? 15);
+  const [satellites, setSatellites] = useState<number>(() => initial?.satellites ?? 0);
   const [companyName] = useState<string>('AETHER DYNAMICS');
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
 
-  const [rockets, setRockets] = useState<RocketModel[]>(INITIAL_ROCKETS);
-  const [contracts, setContracts] = useState<Contract[]>(INITIAL_CONTRACTS);
-  const [hangarBoosters, setHangarBoosters] = useState<BoosterInventoryItem[]>([]);
-  const [techTree, setTechTree] = useState<TechUpgrade[]>(INITIAL_TECH);
+  const [rockets, setRockets] = useState<RocketModel[]>(() => initial?.rockets ?? INITIAL_ROCKETS);
+  const [contracts] = useState<Contract[]>(() => initial?.contracts ?? INITIAL_CONTRACTS);
+  const [hangarBoosters, setHangarBoosters] = useState<BoosterInventoryItem[]>(() => initial?.hangarBoosters ?? []);
+  const [techTree, setTechTree] = useState<TechUpgrade[]>(() => initial?.techTree ?? INITIAL_TECH);
 
-  const [stats, setStats] = useState<MissionStats>({
+  const [stats, setStats] = useState<MissionStats>(() => initial?.stats ?? {
     totalLaunches: 0,
     successfulOrbits: 0,
     boostersLanded: 0,
@@ -36,26 +67,6 @@ export function App() {
   });
 
   const [activeMission, setActiveMission] = useState<ActiveMission | null>(null);
-
-  // Load from local storage on mount
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const data = JSON.parse(saved);
-        if (data.cash !== undefined) setCash(data.cash);
-        if (data.science !== undefined) setScience(data.science);
-        if (data.satellites !== undefined) setSatellites(data.satellites);
-        if (data.rockets) setRockets(data.rockets);
-        if (data.contracts) setContracts(data.contracts);
-        if (data.hangarBoosters) setHangarBoosters(data.hangarBoosters);
-        if (data.techTree) setTechTree(data.techTree);
-        if (data.stats) setStats(data.stats);
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
 
   // Save to local storage on state change
   const saveTimeout = useRef<number | null>(null);
@@ -228,7 +239,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-cyan-500 selection:text-white">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-cyan-500 selection:text-white pb-20 md:pb-0">
       {/* Top Telemetry & Economy Navbar */}
       <Header
         cash={cash}
@@ -242,7 +253,7 @@ export function App() {
       />
 
       {/* Main View Area */}
-      <main className="flex-1 pb-12">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-6">
         {activeMission ? (
           <LaunchDirector
             mission={activeMission}
@@ -269,25 +280,23 @@ export function App() {
         )}
       </main>
 
-      {/* Footer Status Bar */}
-      <footer className="border-t border-slate-900 bg-slate-950/80 px-4 py-3 text-xs font-mono text-slate-500 flex flex-wrap items-center justify-between gap-4">
+      {/* Footer Status Bar (Desktop) */}
+      <footer className="hidden md:flex border-t border-slate-900 bg-slate-950/80 px-4 py-2.5 text-xs font-mono text-slate-500 items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5 text-slate-400">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            SPACEY v1.0.0 MVP
+            SPACEY v1.1.0 Mobile MVP
           </span>
           <span>•</span>
-          <span>Autosave: ACTIVE</span>
+          <span>Autosave: Active</span>
         </div>
 
-        <div className="flex items-center gap-4">
-          <button
-            onClick={handleResetGame}
-            className="text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
-          >
-            Reset Progress
-          </button>
-        </div>
+        <button
+          onClick={handleResetGame}
+          className="text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
+        >
+          Reset Campaign
+        </button>
       </footer>
     </div>
   );
