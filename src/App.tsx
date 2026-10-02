@@ -143,13 +143,13 @@ export function App() {
 
   // Primary Resources (Cr, RP, Relays, ARIA Tier)
   const [cash, setCash] = useState<number>(() => initial?.cash ?? 400000);
-  const [science, setScience] = useState<number>(() => initial?.science ?? 25);
+  const [science, setScience] = useState<number>(() => initial?.science ?? 0);
   const [satellites, setSatellites] = useState<number>(() => initial?.satellites ?? 0);
   const [ariaTier, setAriaTier] = useState<number>(() => initial?.ariaTier ?? 0);
   const [koshaDepots, setKoshaDepots] = useState<KoshaDepot[]>(() => migrateDepots(initial?.koshaDepots));
 
   const [rockets, setRockets] = useState<RocketModel[]>(() => migrateRockets(initial?.rockets));
-  const [contracts] = useState<Contract[]>(() => migrateContracts(initial?.contracts));
+  const [contracts, setContracts] = useState<Contract[]>(() => migrateContracts(initial?.contracts));
   const [hangarBoosters, setHangarBoosters] = useState<BoosterInventoryItem[]>(() => migrateBoosters(initial?.hangarBoosters));
   const [techTree, setTechTree] = useState<TechUpgrade[]>(() => migrateTechTree(initial?.techTree));
 
@@ -323,6 +323,23 @@ export function App() {
 
     // Reset active mission
     setActiveMission(null);
+    setContracts(prev =>
+      prev.map(c =>
+        contractsToFinalize.some(tc => tc.id === c.id) ? { ...c, completed: true } : c
+      )
+    );
+  };
+
+  // Abort: refund the launch cost and return to mission control
+  const handleAbortMission = () => {
+    if (activeMission) {
+      const { rocket, usedBoosterId } = activeMission;
+      const refund = usedBoosterId
+        ? Math.round(rocket.cost * rocket.refurbishCostPercent)
+        : rocket.cost;
+      setCash(prev => prev + refund);
+    }
+    setActiveMission(null);
   };
 
   // Unlock Rocket & check ARIA tier progression
@@ -399,7 +416,7 @@ export function App() {
             mission={activeMission}
             techTree={techTree}
             onMissionFinalized={handleMissionFinalized}
-            onAbort={() => setActiveMission(null)}
+            onAbort={handleAbortMission}
           />
         ) : (
           <HQView

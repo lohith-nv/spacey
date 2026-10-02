@@ -321,6 +321,11 @@ export const ContractsTab: React.FC<ContractsTabProps> = ({
                       DEPOT CORE
                     </span>
                   )}
+                  {contract.completed && (
+                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/60">
+                      COMPLETED
+                    </span>
+                  )}
                 </div>
 
                 {contract.isConstellationMission && (

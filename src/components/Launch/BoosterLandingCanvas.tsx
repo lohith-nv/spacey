@@ -44,7 +44,7 @@ export const BoosterLandingCanvas: React.FC<BoosterLandingProps> = ({
   const [verticalSpeed, setVerticalSpeed] = useState(0);
   const [horizontalSpeed, setHorizontalSpeed] = useState(0);
   const [tiltDeg, setTiltDeg] = useState(0);
-  const [altitudeM, setAltitudeM] = useState(1100);
+  const [altitudeM, setAltitudeM] = useState(3000);
   const [gameResult, setGameResult] = useState<'playing' | 'landed' | 'crashed' | 'splashdown'>('playing');
 
   // Input states
@@ -59,7 +59,7 @@ export const BoosterLandingCanvas: React.FC<BoosterLandingProps> = ({
     x: 300,
     y: 80,
     vx: 0,
-    vy: 3.4,
+    vy: 1.8,
     angle: 0,
     angularVelocity: 0,
     fuel: 100,
@@ -161,7 +161,7 @@ export const BoosterLandingCanvas: React.FC<BoosterLandingProps> = ({
 
     // Simulation virtual bounds
     const worldWidth = 600;
-    const worldHeight = 520;
+    const worldHeight = 900;
     const droneShipX = worldWidth / 2;
     const droneShipWidth = 140;
     const deckY = worldHeight - 55;
@@ -252,11 +252,11 @@ export const BoosterLandingCanvas: React.FC<BoosterLandingProps> = ({
         }
 
         // Gravity
-        state.vy += 0.088;
+        state.vy += 0.035;
 
         // Atmospheric drag (aerodynamic terminal velocity)
         state.vx *= 0.986;
-        state.vy *= 0.992;
+        state.vy *= 0.99;
 
         // Gentle ocean wind shear
         state.vx += Math.sin(Date.now() / 1800) * 0.032 * windResistanceMultiplier;
@@ -265,8 +265,8 @@ export const BoosterLandingCanvas: React.FC<BoosterLandingProps> = ({
         state.x += state.vx;
         state.y += state.vy;
 
-        // Altitude calculation (1100m to 0m)
-        const currentAlt = Math.max(0, Math.round(((deckY - state.y) / (deckY - 80)) * 1100));
+        // Altitude calculation (3000m to 0m)
+        const currentAlt = Math.max(0, Math.round(((deckY - state.y) / (deckY - 80)) * 3000));
         setAltitudeM(currentAlt);
 
         // Deploy legs when close

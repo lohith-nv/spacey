@@ -57,6 +57,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   // First contract flyable by an unlocked rocket = the player's next objective
   const nextMission = useMemo(() => {
     return contracts.find(contract =>
+      !contract.completed &&
       rockets.some(r => r.unlocked && r.payloadCapacityKg >= contract.payloadMassKg)
     );
   }, [contracts, rockets]);
