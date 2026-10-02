@@ -1,104 +1,159 @@
-# Spacey — Progression
+# Spacey: Progression (Canon v3)
 
-## Campaign Structure
+## Design Pillars
 
-Spacey's campaign follows one continuous arc: from a leased pad and a hopper with spring
-legs to a deep-space delivery empire with a reusable heavy-lift fleet. Progress gates
-through rocket tiers, science unlocks, and client contracts.
+- **Landing is routine, logistics is the game.** ARIA handles recoveries. The challenge is routing, timing, propellant, and fleet scale.
+- **The Marga grows with the player.** Each act adds a new vehicle, a new Kosha tier, and a new ARIA capability.
+- **Propellant is the real economy.** Early on it is lifted from Earth. By the end, it is mined from ice.
+
+## Resources
+
+| Resource | Use |
+|---|---|
+| **Credits (Cr)** | Buy vehicles, refurbish, build Koshas |
+| **Research (RP)** | Unlock vehicles, ARIA tiers, and upgrades |
+| **Propellant (Pr)** | Fuel for tugs, NTR stages, and sales to clients. Stored in Koshas |
+
+## ARIA Tiers
+
+| Tier | Name | Unlocks | Gate |
+|---|---|---|---|
+| 0 | Recovery | Automated landings and refurbishment tracking | Start |
+| 1 | Manifest Planner | Multiple payloads on one flight | Act II |
+| 2 | Rendezvous & Docking | Tugs, depot transfers, station berthing | Act III |
+| 3 | Fleet Orchestration | Several missions in flight at once | Act IV |
+| 4 | Deep-Space Autonomy | Missions beyond cislunar space, run without ground control | Act V |
 
 ---
 
-## Act I — Sub-Orbital Schoolhouse
+## Act I: Laghu Yard
 
-*The Aether Hopper era. Learn to launch, land, and reuse.*
+*Learn to launch, land, and reuse. Light cargo, thin margins, one big bet.*
 
-**Starting state**
-- Rocket: Aether Hopper (unlocked, reusable, 35t dry, 800 kg payload)
-- Cash: starting budget · Science: 0
-- First drone-ship crew barely survives the learning curve
+**Start:** Laghu (1,000 kg to LEO) · 400k Cr · 0 RP · ARIA Tier 0
 
-**Contracts available**
 | Contract | Client | Payload | Reward | Notes |
 |---|---|---|---|---|
-| StarSync CubeSat Deployment | Orbital IoT Labs | 500 kg | $240k / 25 science | First flight of the campaign |
-| StarStream Comms Relay Node #1 | GlobalNet Telecom | 750 kg | $310k / 40 science | First constellation node — unlocks passive $/sec revenue |
+| Sensor Seeding I | Orbital IoT Labs | 300 kg | 180k Cr / 20 RP | Tutorial flight |
+| Suborbital Cargo Hop | Open Manifest | 200 kg | 90k Cr / 10 RP | Spot market, market-rate pay, repeatable filler |
+| StarStream Relay Node #1 | GlobalNet | 800 kg | 260k Cr / 35 RP | Revenue-share stake: first passive income |
 
-**Technology unlocks (cheap, early)**
-- Titanium Grid Fins (30 science) — better hypersonic steering
-- High-Impulse Cold Gas Thrusters (40 science) — tamer final approach
-- Ka-Band Phased Array Nodes (50 science) — +$15/sec per orbital satellite
+**Upgrades:** Lattice Fins I (25 RP), Cold-Gas Settling Thrusters (35 RP), Relay Array Tuning (45 RP, +passive income per StarStream node)
 
-**Booster economics**
-- Refurbish a Hopper at ~35% of sticker price → first reused flight
-- First drone-ship landing marks the start of the recovery loop
+**Economy:** Refurbishing a Laghu costs about 30% of its build price. Spot-market flights keep the lights on but never make anyone rich.
+
+**Milestones:** First landing · First reflight · First passive-income tick
 
 ---
 
-## Act II — Orbital Workhorse
+## Act II: Vahana Line
 
-*Falcon Strike-9 era. Two stages, real orbit, a growing constellation.*
+*The cash engine arrives. Two stages home, the first depot in orbit.*
 
-**Unlock**
-- Falcon Strike-9 (50 science, $450k) — 4500 kg payload, drone-ship landing certified
+**Unlock:** Vahana (70 RP, 650k Cr) · 9,000 kg to LEO · both stages return · ARIA Tier 1
 
-**Contracts available**
 | Contract | Client | Payload | Reward | Notes |
 |---|---|---|---|---|
-| Earth Sentinel Radar Satellite | Planetary Defense Council | 3200 kg | $620k / 65 science | First heavy-lift contract |
-| StarStream Comms Relay Node #2 | GlobalNet Telecom | 3800 kg | $680k / 75 science | Second node; constellation revenue compounds |
-| Astra Station Resupply Logistics | International Space Alliance | 4400 kg | $950k / 110 science | Station route sustains cash flow |
+| Sensor Seeding II | Orbital IoT Labs | 2,500 kg | 520k Cr / 55 RP | Manifest Planner tutorial |
+| StarStream Relay Node #2 | GlobalNet | 4,000 kg | 780k Cr / 80 RP | Second stake, passive income compounds |
+| Earth Sentinel Radar | Planetary Defense Council | 5,200 kg | 900k Cr / 95 RP | First heavy contract |
+| Astra Station Resupply | International Space Alliance | 8,500 kg | 1.4M Cr / 140 RP | Repeating route that sustains cash flow |
+| **Kosha-LEO Foundation** | In-house | 9,000 kg propellant | Builds Kosha-LEO | Fuel lifted entirely from Earth |
 
-**Technology unlocks (mid-game)**
-- Pneumatic Landing Gear Dampers (45 science) — tolerates hotter touchdowns
-- Automated Recovery Bay Robotics (60 science) — −15% refurb cost per level, up to −45%
-- Max out Grid Fins / RCS / Landing Legs for reliable drone-ship landings on heavy profiles
+**Upgrades:** Stage-Return Guidance (60 RP), Recovery Bay Robotics I–III (−15% refurb per level, up to −45%), Cryo-Storage I (Kosha capacity)
 
-**Milestones**
-- First successful Falcon drone-ship recovery
-- First full constellation revenue stream from two StarStream nodes
-- Booster inventory grows; hangar refurb loop becomes the default
+**Milestones:** First double-stage recovery · Kosha-LEO online · First passenger flight to Astra Station
 
 ---
 
-## Act III — Heavy Lift & Deep Space
+## Act III: The Marga Opens
 
-*Titan Heavy V era. Constellation megacontracts and the Chronos probe.*
+*Orbit is routine. Now build the lanes beyond it.*
 
-**Unlock**
-- Titan Heavy V (150 science, $1.2M) — 15,000 kg payload, triple-core, deep space
+**Unlock:** Setu tug (130 RP, 900k Cr) · Kosha-Cislunar · ARIA Tier 2
 
-**Contracts available**
 | Contract | Client | Payload | Reward | Notes |
 |---|---|---|---|---|
-| Chronos Outer Planets Surveyor | AstroPhysics Institute | 12,000 kg | $1.85M / 220 science | Campaign finale — Jupiter flyby injection with ion thrusters |
+| Cislunar Picket Line | Orbital IoT Labs | 3,000 kg | 1.1M Cr / 120 RP | First Vahana-to-Setu handoff |
+| Earth–Moon Relay Chain | GlobalNet | 2 nodes, 3,500 kg each | 1.8M Cr / 160 RP | Cislunar telemetry coverage, more passive income |
+| Ring Segment Delivery | International Space Alliance | 11,000 kg (two flights) | 2.3M Cr / 190 RP | Setu tows segments to Astra Station |
+| Near-Earth Asteroid Survey | Planetary Defense Council | 2,400 kg | 1.5M Cr / 170 RP | First Setu mission beyond the Moon |
+| Prospector Landers | Belt Consortium | 6,000 kg | 1.7M Cr / 180 RP | Opens the ice economy |
+| **Kosha-Cislunar Foundation** | In-house | 12,000 kg propellant | Builds Kosha-Cislunar | Still on Earth-lifted fuel |
 
-**Endgame tech (all categories maxed)**
-- Recovery: Grid Fins III + Landing Legs III → near-guaranteed booster saves
-- Avionics: RCS Thrusters III → minimal turbulence drift
-- Propulsion/Hangar: Recovery Bay Robotics III → −45% refurb cost
-- Constellation: Phased Arrays level 4 → +$60/sec per satellite
+**Upgrades:** Docking Collars, Efficiency Tuning for Setu, Cryo-Storage II
 
-**Milestones**
-- First Titan Heavy V launch and core recovery
-- Chronos probe injected onto trans-Jovian trajectory — campaign complete
-- Replay/tycoon mode: constellation passive income + booster fleet sustain the company
+**Milestones:** First Setu rendezvous · Kosha-Cislunar online · First pilot ice shipment from the Moon, which makes Kosha-Cislunar the first self-sustaining depot
 
 ---
 
-## Progression Summary Table
+## Act IV: Airavata and the Long Lanes
 
-| Stage | Rocket | Unlock cost | Payload | Key contract | Science gate |
+*Heavy lift, nuclear transfer, and the first bulk ice.*
+
+**Unlock:** Airavata (320 RP, 4.2M Cr) · 40,000 kg to LEO · booster lands · NTR stage fires above LEO (14,000 kg to the Belt) · **requires an online Kosha to refurbish the NTR stage**
+
+**Unlock:** Bharavaha hauler (300 RP, 2.6M Cr) · ARIA Tier 3
+
+| Contract | Client | Payload | Reward | Notes |
+|---|---|---|---|---|
+| Belt Outpost Foundation | Belt Consortium | 14,000 kg | 4.5M Cr / 260 RP | First Airavata NTR mission |
+| Ice Run I | Belt Consortium | 50,000 kg ice | 3.8M Cr / 240 RP | First Bharavaha bulk haul to Kosha-Cislunar |
+| Asteroid Redirection | Planetary Defense Council | 12,000 kg | 5.2M Cr / 280 RP | Tests Fleet Orchestration |
+| Ring Expansion | International Space Alliance | 3 Vahana flights + Setu tows | 4.0M Cr / 250 RP | Parallel missions |
+| Deep Relay Chain | GlobalNet | 3 nodes, 4,000 kg each | 4.8M Cr / 270 RP | Belt-range coverage, big passive income |
+| **Kosha-Belt Foundation** | In-house | Setu-hauled | Builds Kosha-Belt | Fueled by Belt ice |
+
+**Upgrades:** NTR Stage Refurbishment, Bulk Ice Handling, Electrolysis Bays (Kosha propellant output)
+
+**Milestones:** First NTR burn · First NTR stage refurbished at a Kosha · First bulk ice haul · **Marga self-sustaining**, so Earth-lifted propellant becomes a niche
+
+---
+
+## Act V: The Jovian Run
+
+*A long lane, no ground control, and a surveyor that has to stay alive.*
+
+**Unlock:** ARIA Tier 4: Deep-Space Autonomy (360 RP)
+
+| Contract | Client | Payload | Reward | Notes |
+|---|---|---|---|---|
+| Jovian Relay Chain | GlobalNet | 4 nodes, 3,500 kg each | 7.0M Cr / 320 RP | Telemetry backbone for Chronos |
+| Outer Lane Staging | In-house | 20,000 kg propellant | Stages Kosha-Belt for long burns | Prepares the Jupiter route |
+| **Chronos Surveyor** | AstroPhysics Institute | 10,000 kg | 9.0M Cr / 400 RP | First permanent Jovian orbiter, injected by an Airavata NTR stage with ion-thruster cruise |
+| **Chronos Resupply Cycle I** | AstroPhysics Institute | 6,000 kg | 5.5M Cr / 300 RP | **Campaign complete** when delivered |
+
+**Milestones:** Chronos injected · First Jovian resupply delivered · Campaign complete
+
+---
+
+## Progression Summary
+
+| Stage | Vehicle gained | Unlock cost | Payload | Key contract | RP gate |
 |---|---|---|---|---|---|
-| Hopper | Aether Hopper | — | 800 kg | StarSync CubeSat | 0 |
-| Hopper + node | Aether Hopper | — | 750 kg | StarStream #1 | 0 |
-| Falcon | Falcon Strike-9 | 50 sci / $450k | 4500 kg | Earth Sentinel | ~25–40 |
-| Falcon + node | Falcon Strike-9 | — | 3800 kg | StarStream #2 | ~65–75 |
-| Station route | Falcon Strike-9 | — | 4400 kg | Astra Resupply | ~110 |
-| Titan | Titan Heavy V | 150 sci / $1.2M | 15,000 kg | Chronos Surveyor | ~220 |
+| Act I | Laghu | Start | 1,000 kg | StarStream Node #1 | 0 |
+| Act II | Vahana | 70 RP / 650k Cr | 9,000 kg | Astra Resupply | ~70–140 |
+| Act III | Setu | 130 RP / 900k Cr | tug | Prospector Landers | ~130–190 |
+| Act IV | Airavata, Bharavaha | 320 RP / 4.2M Cr, 300 RP / 2.6M Cr | 40,000 kg | Belt Outpost | ~250–280 |
+| Act V | none | 360 RP (ARIA 4) | 10,000 kg | Chronos Surveyor | ~320–400 |
 
-## Difficulty & Recovery Loop
+## Core Loops
 
-- Booster condition drops per flight; refurbish or fly new
-- Harder contracts (heavier payloads) increase landing velocity → tech upgrades matter
-- Recovery Bay Robotics reduces refurb cost → reusable fleet scales economically
-- Passive constellation income offsets failed or marginal missions
+- **Launch loop:** Fly, recover, refurbish, reflight. ARIA handles recovery, and condition drops each flight.
+- **Manifest loop:** Bundle payloads onto fewer flights. Open Manifest spot-market jobs fill gaps at market-rate pay.
+- **Marga loop:** Earn Cr and RP, build Koshas, shorten lanes, sell propellant.
+- **Passive loop:** StarStream revenue-share stakes pay out continuously and cushion failed or marginal missions.
+
+## Gating Rules
+
+- Airavata cannot be flown without an online Kosha, because its NTR stage needs refurbishment.
+- A Kosha does not become self-sustaining until it receives an ice supply. Before that, it consumes Earth-lifted propellant.
+- Setu and Bharavaha never enter an atmosphere. Only Laghu, Vahana, and the Airavata booster land.
+- Missions beyond cislunar space require ARIA Tier 4.
+- Chronos resupply must continue after injection. A surveyor with no supply chain is not complete.
+
+## Post-Campaign (Marga Sandbox)
+
+- Contracts keep generating, with Belt price swings and new client requests.
+- Open-ended expansion: more Koshas, more lanes, bigger fleets.
+- Passive income and the self-sustaining Marga keep the company running with no player intervention.
