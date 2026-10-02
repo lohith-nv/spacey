@@ -2,15 +2,21 @@ import { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { HQView } from './components/HQ/HQView';
 import { LaunchDirector } from './components/Launch/LaunchDirector';
+import {
+  INITIAL_ROCKETS,
+  INITIAL_CONTRACTS,
+  INITIAL_TECH,
+  INITIAL_KOSHA_DEPOTS,
+} from './data/initialData';
 import type {
   RocketModel,
   Contract,
-  TechUpgrade,
   BoosterInventoryItem,
+  TechUpgrade,
   MissionStats,
   ActiveMission,
+  KoshaDepot,
 } from './types/game';
-import { INITIAL_ROCKETS, INITIAL_CONTRACTS, INITIAL_TECH } from './data/initialData';
 import { sounds } from './utils/audio';
 
 const STORAGE_KEY = 'spacey_save_v1';
@@ -19,6 +25,8 @@ interface SavedState {
   cash?: number;
   science?: number;
   satellites?: number;
+  ariaTier?: number;
+  koshaDepots?: KoshaDepot[];
   rockets?: RocketModel[];
   contracts?: Contract[];
   hangarBoosters?: BoosterInventoryItem[];
@@ -44,19 +52,91 @@ const getInitialSave = (): SavedState | null => {
   return initialLoadedSave;
 };
 
+// Canon v3 Migration helpers for backward-compatibility
+const migrateRockets = (savedRockets?: RocketModel[]): RocketModel[] => {
+  if (!savedRockets || savedRockets.length === 0) return INITIAL_ROCKETS;
+  const mapped = savedRockets.map(r => {
+    // Map legacy ids to canonical Sanskrit ids
+    if (r.id === 'aether-hopper' || r.id === 'laghu') {
+      const canon = INITIAL_ROCKETS.find(i => i.id === 'laghu')!;
+      return { ...canon, unlocked: true };
+    }
+    if (r.id === 'falcon-strike' || r.id === 'vahana') {
+      const canon = INITIAL_ROCKETS.find(i => i.id === 'vahana')!;
+      return { ...canon, unlocked: r.unlocked };
+    }
+    if (r.id === 'titan-heavy' || r.id === 'airavata') {
+      const canon = INITIAL_ROCKETS.find(i => i.id === 'airavata')!;
+      return { ...canon, unlocked: r.unlocked };
+    }
+    return r;
+  });
+
+  // Ensure all canonical vehicles are present in fleet
+  INITIAL_ROCKETS.forEach(canon => {
+    if (!mapped.some(m => m.id === canon.id)) {
+      mapped.push(canon);
+    }
+  });
+
+  return mapped;
+};
+
+const migrateBoosters = (savedBoosters?: BoosterInventoryItem[]): BoosterInventoryItem[] => {
+  if (!savedBoosters) return [];
+  return savedBoosters.map(b => {
+    let rocketId = b.rocketId;
+    let rocketName = b.rocketName;
+    if (rocketId === 'aether-hopper') {
+      rocketId = 'laghu';
+      rocketName = 'Laghu';
+    } else if (rocketId === 'falcon-strike') {
+      rocketId = 'vahana';
+      rocketName = 'Vahana';
+    } else if (rocketId === 'titan-heavy') {
+      rocketId = 'airavata';
+      rocketName = 'Airavata';
+    }
+    return { ...b, rocketId, rocketName };
+  });
+};
+
+const migrateContracts = (savedContracts?: Contract[]): Contract[] => {
+  if (!savedContracts || savedContracts.length === 0) return INITIAL_CONTRACTS;
+  // If save had old contracts, upgrade to canonical manifest
+  const hasLegacy = savedContracts.some(c => c.id === 'contract-cubesat-1' || c.minRocketTier === 'aether-hopper');
+  if (hasLegacy) return INITIAL_CONTRACTS;
+  return savedContracts;
+};
+
+const migrateTechTree = (savedTech?: TechUpgrade[]): TechUpgrade[] => {
+  if (!savedTech || savedTech.length === 0) return INITIAL_TECH;
+  return INITIAL_TECH.map(canon => {
+    const existing = savedTech.find(s => s.id === canon.id || (canon.id === 'tech-relay-tuning' && s.id === 'tech-satellite-bandwidth'));
+    if (existing) {
+      return { ...canon, level: existing.level, unlocked: existing.unlocked };
+    }
+    return canon;
+  });
+};
+
 export function App() {
   const initial = getInitialSave();
 
-  const [cash, setCash] = useState<number>(() => initial?.cash ?? 450000);
-  const [science, setScience] = useState<number>(() => initial?.science ?? 15);
+  // Primary Resources (Cr, RP, Relays, ARIA Tier)
+  const [cash, setCash] = useState<number>(() => initial?.cash ?? 400000);
+  const [science, setScience] = useState<number>(() => initial?.science ?? 25);
   const [satellites, setSatellites] = useState<number>(() => initial?.satellites ?? 0);
-  const [companyName] = useState<string>('AETHER DYNAMICS');
+  const [ariaTier, setAriaTier] = useState<number>(() => initial?.ariaTier ?? 0);
+  const [companyName] = useState<string>('SPACEY AEROSPACE');
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
 
-  const [rockets, setRockets] = useState<RocketModel[]>(() => initial?.rockets ?? INITIAL_ROCKETS);
-  const [contracts] = useState<Contract[]>(() => initial?.contracts ?? INITIAL_CONTRACTS);
-  const [hangarBoosters, setHangarBoosters] = useState<BoosterInventoryItem[]>(() => initial?.hangarBoosters ?? []);
-  const [techTree, setTechTree] = useState<TechUpgrade[]>(() => initial?.techTree ?? INITIAL_TECH);
+  // Fleet & Manifest
+  const [rockets, setRockets] = useState<RocketModel[]>(() => migrateRockets(initial?.rockets));
+  const [contracts] = useState<Contract[]>(() => migrateContracts(initial?.contracts));
+  const [hangarBoosters, setHangarBoosters] = useState<BoosterInventoryItem[]>(() => migrateBoosters(initial?.hangarBoosters));
+  const [techTree, setTechTree] = useState<TechUpgrade[]>(() => migrateTechTree(initial?.techTree));
+  const [koshaDepots] = useState<KoshaDepot[]>(() => initial?.koshaDepots ?? INITIAL_KOSHA_DEPOTS);
 
   const [stats, setStats] = useState<MissionStats>(() => initial?.stats ?? {
     totalLaunches: 0,
@@ -80,6 +160,8 @@ export function App() {
             cash,
             science,
             satellites,
+            ariaTier,
+            koshaDepots,
             rockets,
             contracts,
             hangarBoosters,
@@ -91,11 +173,11 @@ export function App() {
         // ignore
       }
     }, 400);
-  }, [cash, science, satellites, rockets, contracts, hangarBoosters, techTree, stats]);
+  }, [cash, science, satellites, ariaTier, koshaDepots, rockets, contracts, hangarBoosters, techTree, stats]);
 
-  // Calculate passive income rate ($/sec)
-  const bandwidthTech = techTree.find(t => t.id === 'tech-satellite-bandwidth');
-  const ratePerSat = 25 + (bandwidthTech ? bandwidthTech.level * bandwidthTech.statBonus : 0);
+  // Calculate passive StarStream income rate (Cr/sec)
+  const relayTech = techTree.find(t => t.id === 'tech-relay-tuning');
+  const ratePerSat = 25 + (relayTech ? relayTech.level * relayTech.statBonus : 0);
   const passiveRate = satellites * ratePerSat;
 
   // Passive income tick interval
@@ -125,7 +207,10 @@ export function App() {
       ? Math.round(rocket.cost * rocket.refurbishCostPercent)
       : rocket.cost;
 
-    if (cash < launchCost) return;
+    if (cash < launchCost) {
+      sounds.playAlarm();
+      return;
+    }
 
     // Deduct cost
     setCash(prev => prev - launchCost);
@@ -158,19 +243,19 @@ export function App() {
 
     const savingsAchieved = usedBoosterId ? rocket.cost - launchCost : 0;
 
-    // Award cash & science
+    // Award cash & research points
     const scienceGained = contract.rewardScience + (outcome.boosterLanded ? 15 : 5);
     setCash(prev => prev + contract.rewardCash);
     setScience(prev => prev + scienceGained);
 
-    // Add satellite to constellation if applicable
+    // Add satellite to StarStream mesh if applicable
     if (contract.isConstellationMission) {
       setSatellites(prev => prev + 1);
     }
 
     // Add landed booster to hangar
     if (outcome.boosterLanded) {
-      const serialNum = `B${Math.floor(1050 + Math.random() * 40)}-F${Math.floor(1 + Math.random() * 3)}`;
+      const serialNum = `${rocket.name.toUpperCase().slice(0, 3)}-${Math.floor(100 + Math.random() * 899)}`;
       const newBooster: BoosterInventoryItem = {
         id: serialNum,
         rocketId: rocket.id,
@@ -195,7 +280,7 @@ export function App() {
     setActiveMission(null);
   };
 
-  // Unlock Rocket
+  // Unlock Rocket & check ARIA tier progression
   const handleUnlockRocket = (rocketId: string) => {
     const target = rockets.find(r => r.id === rocketId);
     if (!target || science < target.unlockCost) return;
@@ -204,6 +289,15 @@ export function App() {
     setRockets(prev =>
       prev.map(r => (r.id === rocketId ? { ...r, unlocked: true } : r))
     );
+
+    // Advance ARIA tier if applicable
+    if (rocketId === 'vahana' && ariaTier < 1) {
+      setAriaTier(1);
+    } else if (rocketId === 'setu' && ariaTier < 2) {
+      setAriaTier(2);
+    } else if ((rocketId === 'airavata' || rocketId === 'bharavaha') && ariaTier < 3) {
+      setAriaTier(3);
+    }
   };
 
   // Scrap booster for salvage
@@ -247,6 +341,7 @@ export function App() {
         satellites={satellites}
         passiveRate={passiveRate}
         hangarCount={hangarBoosters.length}
+        ariaTier={ariaTier}
         soundEnabled={soundEnabled}
         onToggleSound={handleToggleSound}
         companyName={companyName}
@@ -272,6 +367,8 @@ export function App() {
             rockets={rockets}
             hangarBoosters={hangarBoosters}
             techTree={techTree}
+            ariaTier={ariaTier}
+            koshaDepots={koshaDepots}
             onInitiateLaunch={handleInitiateLaunch}
             onUnlockRocket={handleUnlockRocket}
             onScrapBooster={handleScrapBooster}
@@ -280,20 +377,15 @@ export function App() {
         )}
       </main>
 
-      {/* Footer Status Bar (Desktop) */}
-      <footer className="hidden md:flex border-t border-slate-900 bg-slate-950/80 px-4 py-2.5 text-xs font-mono text-slate-500 items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 text-slate-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            SPACEY v1.1.0 Mobile MVP
-          </span>
-          <span>•</span>
-          <span>Autosave: Active</span>
-        </div>
-
+      {/* Subtle Mobile-Friendly Footer */}
+      <footer className="border-t border-slate-900/80 py-2.5 px-4 text-center text-[10px] text-slate-400 font-mono flex items-center justify-center gap-2">
+        <span>SPACEY Canon v3 • ARIA Tier {ariaTier}</span>
+        <span>•</span>
+        <span className="text-emerald-500/80">Autosave: Active</span>
+        <span>•</span>
         <button
           onClick={handleResetGame}
-          className="text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
+          className="text-slate-400 hover:text-rose-400 cursor-pointer transition-colors underline"
         >
           Reset Campaign
         </button>

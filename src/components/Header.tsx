@@ -1,5 +1,5 @@
 import React from 'react';
-import { Rocket, Satellite, Atom, Volume2, VolumeX, ShieldCheck, DollarSign } from 'lucide-react';
+import { Rocket, Satellite, Atom, Volume2, VolumeX, ShieldCheck, DollarSign, Cpu } from 'lucide-react';
 import { sounds } from '../utils/audio';
 
 interface HeaderProps {
@@ -8,6 +8,7 @@ interface HeaderProps {
   satellites: number;
   passiveRate: number;
   hangarCount: number;
+  ariaTier?: number;
   soundEnabled: boolean;
   onToggleSound: () => void;
   companyName: string;
@@ -19,14 +20,15 @@ export const Header: React.FC<HeaderProps> = ({
   satellites,
   passiveRate,
   hangarCount,
+  ariaTier = 0,
   soundEnabled,
   onToggleSound,
   companyName,
 }) => {
   const formatCash = (val: number) => {
-    if (val >= 1_000_000) return `$${(val / 1_000_000).toFixed(2)}M`;
-    if (val >= 100_000) return `$${Math.round(val / 1000)}k`;
-    return `$${val.toLocaleString()}`;
+    if (val >= 1_000_000) return `${(val / 1_000_000).toFixed(2)}M Cr`;
+    if (val >= 100_000) return `${Math.round(val / 1000)}k Cr`;
+    return `${val.toLocaleString()} Cr`;
   };
 
   return (
@@ -45,27 +47,31 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="hidden sm:inline-block text-[9px] tracking-widest px-1 py-0.5 rounded bg-cyan-950/80 text-cyan-400 border border-cyan-700/50 uppercase font-mono">
                 FLIGHT DIR
               </span>
+              <span className="text-[9px] font-mono px-1 py-0.5 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-700/50 flex items-center gap-0.5">
+                <Cpu className="w-2.5 h-2.5 text-indigo-400" />
+                ARIA-{ariaTier}
+              </span>
             </div>
           </div>
         </div>
 
         {/* Global Telemetry Pill Bar */}
-        <div className="flex items-center gap-1.5 sm:gap-3 text-xs overflow-x-auto no-scrollbar py-0.5">
-          {/* Funds */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 text-xs overflow-x-auto no-scrollbar py-0.5">
+          {/* Treasury Credits (Cr) */}
           <div
-            title={`Treasury: $${cash.toLocaleString()}`}
+            title={`Treasury: ${cash.toLocaleString()} Cr`}
             className="flex items-center gap-1.5 bg-slate-950/90 border border-slate-800/90 px-2 sm:px-2.5 py-1 rounded-lg shrink-0"
           >
             <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
             <span className="font-mono-numbers font-bold text-emerald-400 text-xs sm:text-sm">
               <span className="sm:hidden">{formatCash(cash)}</span>
-              <span className="hidden sm:inline">${cash.toLocaleString()}</span>
+              <span className="hidden sm:inline">{cash.toLocaleString()} Cr</span>
             </span>
           </div>
 
-          {/* Constellation */}
+          {/* StarStream Constellation */}
           <div
-            title={`Constellation: ${satellites} satellites (+$${passiveRate}/sec)`}
+            title={`StarStream Relays: ${satellites} nodes (+${passiveRate} Cr/s)`}
             className="flex items-center gap-1 sm:gap-1.5 bg-slate-950/80 border border-slate-800/80 px-2 py-1 rounded-lg shrink-0"
           >
             <Satellite className="w-3.5 h-3.5 text-cyan-400" />
@@ -73,25 +79,25 @@ export const Header: React.FC<HeaderProps> = ({
               {satellites}
               {passiveRate > 0 && (
                 <span className="text-[10px] text-emerald-400 ml-1 font-normal">
-                  +${passiveRate}/s
+                  +{passiveRate}/s
                 </span>
               )}
             </span>
           </div>
 
-          {/* Science */}
+          {/* Research (RP) */}
           <div
-            title={`R&D Science: ${science} PTS`}
+            title={`R&D Research: ${science} RP`}
             className="flex items-center gap-1 sm:gap-1.5 bg-slate-950/80 border border-slate-800/80 px-2 py-1 rounded-lg shrink-0"
           >
             <Atom className="w-3.5 h-3.5 text-purple-400" />
             <span className="font-mono-numbers font-bold text-purple-300 text-xs">
               {science}
-              <span className="hidden sm:inline text-[10px] text-purple-400/80 font-normal ml-0.5">PTS</span>
+              <span className="hidden sm:inline text-[10px] text-purple-400/80 font-normal ml-0.5">RP</span>
             </span>
           </div>
 
-          {/* Hangar */}
+          {/* Fleet Hangar */}
           <div
             title={`Recovered Boosters in Hangar: ${hangarCount}`}
             className="flex items-center gap-1 sm:gap-1.5 bg-slate-950/80 border border-slate-800/80 px-2 py-1 rounded-lg shrink-0"

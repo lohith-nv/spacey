@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import type { Contract, RocketModel, BoosterInventoryItem } from '../../types/game';
-import { ArrowUpRight, Atom, Weight, Satellite, AlertTriangle, ShieldCheck, X } from 'lucide-react';
+import type { Contract, RocketModel, BoosterInventoryItem, KoshaDepot } from '../../types/game';
+import { Atom, Weight, Satellite, AlertTriangle, ShieldCheck, X, Zap, ArrowRight } from 'lucide-react';
 import { sounds } from '../../utils/audio';
 
 interface ContractsTabProps {
@@ -8,6 +8,8 @@ interface ContractsTabProps {
   rockets: RocketModel[];
   hangarBoosters: BoosterInventoryItem[];
   cash: number;
+  ariaTier?: number;
+  koshaDepots?: KoshaDepot[];
   onInitiateLaunch: (contract: Contract, rocket: RocketModel, boosterId?: string) => void;
 }
 
@@ -16,10 +18,11 @@ export const ContractsTab: React.FC<ContractsTabProps> = ({
   rockets,
   hangarBoosters,
   cash,
+  koshaDepots = [],
   onInitiateLaunch,
 }) => {
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
-  const [filter, setFilter] = useState<'all' | 'constellation' | 'heavy'>('all');
+  const [filter, setFilter] = useState<'all' | 'act1' | 'act2' | 'constellation'>('all');
 
   // Find first unlocked rocket as default selection
   const defaultRocketId = useMemo(() => {
@@ -37,11 +40,14 @@ export const ContractsTab: React.FC<ContractsTabProps> = ({
 
   // Filtered contracts
   const filteredContracts = useMemo(() => {
+    if (filter === 'act1') {
+      return contracts.filter(c => c.act === 1);
+    }
+    if (filter === 'act2') {
+      return contracts.filter(c => c.act === 2);
+    }
     if (filter === 'constellation') {
       return contracts.filter(c => c.isConstellationMission);
-    }
-    if (filter === 'heavy') {
-      return contracts.filter(c => c.payloadMassKg >= 15000);
     }
     return contracts;
   }, [contracts, filter]);
@@ -60,8 +66,11 @@ export const ContractsTab: React.FC<ContractsTabProps> = ({
   const canCarryPayload =
     selectedContract && currentRocket ? currentRocket.payloadCapacityKg >= selectedContract.payloadMassKg : true;
 
+  const hasKoshaOnline = koshaDepots.some(k => k.unlocked);
+  const koshaBlocked = currentRocket?.requiresKosha && !hasKoshaOnline;
+
   const handleLaunchClick = () => {
-    if (!selectedContract || !currentRocket) return;
+    if (!selectedContract || !currentRocket || koshaBlocked) return;
     sounds.playBeep(700, 0.12, 'sine');
     onInitiateLaunch(selectedContract, currentRocket, selectedBoosterId || undefined);
   };
@@ -75,7 +84,7 @@ export const ContractsTab: React.FC<ContractsTabProps> = ({
             Mission Contracts Manifest
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Accept payloads to earn treasury bounty and launch orbital nodes.
+            Accept payloads from client partners to earn Credits, Research, and StarStream relay nodes.
           </p>
         </div>
 
@@ -90,20 +99,28 @@ export const ContractsTab: React.FC<ContractsTabProps> = ({
             All ({contracts.length})
           </button>
           <button
+            onClick={() => setFilter('act1')}
+            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+              filter === 'act1' ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Act I (Laghu)
+          </button>
+          <button
+            onClick={() => setFilter('act2')}
+            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+              filter === 'act2' ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Act II (Vahana)
+          </button>
+          <button
             onClick={() => setFilter('constellation')}
             className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
               filter === 'constellation' ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40' : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Satellite className="w-3 h-3 text-cyan-400" /> Constellation
-          </button>
-          <button
-            onClick={() => setFilter('heavy')}
-            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-              filter === 'heavy' ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Heavy Lift
+            <Satellite className="w-3 h-3 text-cyan-400" /> StarStream
           </button>
         </div>
       </div>
@@ -125,12 +142,27 @@ export const ContractsTab: React.FC<ContractsTabProps> = ({
                   : 'bg-slate-900/50 border-slate-800 hover:border-slate-700 hover:bg-slate-800/40'
               }`}
             >
-              {contract.isConstellationMission && (
-                <div className="absolute top-3 right-3 bg-gradient-to-r from-cyan-600 to-indigo-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
-                  <Satellite className="w-3 h-3" />
-                  Constellation Node
+              <div className="flex items-center justify-between gap-1 mb-1.5">
+                <div className="flex items-center gap-1.5">
+                  {contract.act && (
+                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                      ACT {contract.act}
+                    </span>
+                  )}
+                  {contract.isSpotMarket && (
+                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-950/80 text-amber-300 border border-amber-800/60">
+                      SPOT MARKET
+                    </span>
+                  )}
                 </div>
-              )}
+
+                {contract.isConstellationMission && (
+                  <div className="bg-gradient-to-r from-cyan-600 to-indigo-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+                    <Satellite className="w-3 h-3" />
+                    StarStream Node
+                  </div>
+                )}
+              </div>
 
               <div>
                 <div className="text-[11px] font-mono text-cyan-400 font-semibold uppercase tracking-wider">
@@ -152,12 +184,12 @@ export const ContractsTab: React.FC<ContractsTabProps> = ({
                   </span>
                   <span className="text-purple-300 flex items-center gap-0.5 text-[11px]">
                     <Atom className="w-3 h-3 text-purple-400" />
-                    +{contract.rewardScience} sci
+                    +{contract.rewardScience} RP
                   </span>
                 </div>
 
                 <div className="font-mono-numbers font-bold text-emerald-400 text-sm">
-                  ${contract.rewardCash.toLocaleString()}
+                  {contract.rewardCash.toLocaleString()} Cr
                 </div>
               </div>
             </div>
@@ -193,7 +225,7 @@ export const ContractsTab: React.FC<ContractsTabProps> = ({
             {/* Rocket Model Picker */}
             <div>
               <label className="block text-[11px] font-mono uppercase text-slate-400 mb-2">
-                1. Select Rocket Vehicle
+                1. Select Vehicle Class
               </label>
               <div className="space-y-1.5">
                 {rockets
@@ -217,9 +249,11 @@ export const ContractsTab: React.FC<ContractsTabProps> = ({
                         <div className="flex items-center gap-2.5">
                           <span className="text-xl">{rocket.icon}</span>
                           <div>
-                            <div className="font-semibold text-white text-xs sm:text-sm">{rocket.name}</div>
+                            <div className="font-semibold text-white text-xs sm:text-sm">
+                              {rocket.name} {rocket.sanskritRoot ? `(${rocket.sanskritRoot})` : ''}
+                            </div>
                             <div className="text-[11px] text-slate-400 font-mono">
-                              Cap: {rocket.payloadCapacityKg.toLocaleString()} kg
+                              Payload Cap: {rocket.payloadCapacityKg.toLocaleString()} kg
                             </div>
                           </div>
                         </div>
@@ -235,14 +269,13 @@ export const ContractsTab: React.FC<ContractsTabProps> = ({
               </div>
             </div>
 
-            {/* Booster Reusability / Refurbished unit picker */}
+            {/* Booster Selection */}
             <div>
               <label className="block text-[11px] font-mono uppercase text-slate-400 mb-2">
-                2. Booster Core Source
+                2. Booster Core Assignment
               </label>
-
-              <div className="space-y-1.5">
-                {/* Brand new rocket option */}
+              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                {/* Brand new core option */}
                 <div
                   onClick={() => setSelectedBoosterId('')}
                   className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-center justify-between ${
@@ -251,95 +284,102 @@ export const ContractsTab: React.FC<ContractsTabProps> = ({
                       : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
                   }`}
                 >
-                  <div>
-                    <div className="text-xs sm:text-sm font-semibold text-white">Brand New Booster Core</div>
-                    <div className="text-[10px] text-slate-400 font-mono">Fresh build, 100% integrity</div>
-                  </div>
-                  <div className="text-right font-mono-numbers">
-                    <div className="text-xs sm:text-sm font-bold text-slate-200">
-                      ${currentRocket ? currentRocket.cost.toLocaleString() : 0}
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-cyan-400" />
+                    <div>
+                      <div className="text-xs font-semibold text-white">Fabricate New Booster</div>
+                      <div className="text-[10px] text-slate-400">100% factory spec integrity</div>
                     </div>
+                  </div>
+                  <div className="font-mono text-xs text-white">
+                    {currentRocket ? `${currentRocket.cost.toLocaleString()} Cr` : ''}
                   </div>
                 </div>
 
-                {/* Available recovered boosters in hangar */}
-                {availableBoosters.length === 0 ? (
-                  <div className="p-2.5 rounded-lg border border-dashed border-slate-800 text-center text-[11px] text-slate-500 font-mono">
-                    No recovered {currentRocket?.name} boosters in stock. Land a booster to unlock re-flight discounts!
-                  </div>
-                ) : (
-                  availableBoosters.map(booster => {
-                    const isSelected = selectedBoosterId === booster.id;
-                    const reuseCost = currentRocket
-                      ? Math.round(currentRocket.cost * currentRocket.refurbishCostPercent)
-                      : 0;
-                    return (
-                      <div
-                        key={booster.id}
-                        onClick={() => setSelectedBoosterId(booster.id)}
-                        className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-center justify-between ${
-                          isSelected
-                            ? 'bg-emerald-950/50 border-emerald-500 shadow-sm'
-                            : 'bg-slate-950/60 border-slate-800 hover:border-emerald-800/40'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                          <div>
-                            <div className="text-xs sm:text-sm font-semibold text-white font-mono">
-                              #{booster.id} ({booster.flightsCompleted} flights)
-                            </div>
-                            <div className="text-[10px] text-emerald-400 font-mono">
-                              {booster.condition}% integrity
-                            </div>
+                {/* Reused boosters from hangar */}
+                {availableBoosters.map(booster => {
+                  const isSelected = selectedBoosterId === booster.id;
+                  const refurbPrice = currentRocket
+                    ? Math.round(currentRocket.cost * currentRocket.refurbishCostPercent)
+                    : 0;
+                  return (
+                    <div
+                      key={booster.id}
+                      onClick={() => setSelectedBoosterId(booster.id)}
+                      className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-center justify-between ${
+                        isSelected
+                          ? 'bg-slate-800 border-emerald-500 shadow-sm'
+                          : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                        <div>
+                          <div className="text-xs font-mono font-bold text-white flex items-center gap-1.5">
+                            <span>{booster.id}</span>
+                            <span className="text-[10px] text-emerald-400 bg-emerald-950 px-1 rounded">
+                              {booster.condition}% cond
+                            </span>
                           </div>
-                        </div>
-
-                        <div className="text-right font-mono-numbers">
-                          <div className="text-xs sm:text-sm font-bold text-emerald-400">
-                            ${reuseCost.toLocaleString()}
-                          </div>
-                          <div className="text-[9px] text-emerald-500 font-semibold uppercase">
-                            Reused Discount
+                          <div className="text-[10px] text-slate-400">
+                            {booster.flightsCompleted} flight{booster.flightsCompleted === 1 ? '' : 's'} logged
                           </div>
                         </div>
                       </div>
-                    );
-                  })
-                )}
+
+                      <div className="text-right">
+                        <div className="font-mono text-xs text-emerald-400 font-bold">
+                          {refurbPrice.toLocaleString()} Cr
+                        </div>
+                        <div className="text-[9px] text-emerald-300 font-mono">
+                          Re-flight discount
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
 
-          {/* Bottom Action Bar */}
-          <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-4 font-mono text-xs">
+          {/* Action Row & Confirmation */}
+          <div className="mt-5 pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-4 text-xs font-mono w-full sm:w-auto justify-between sm:justify-start">
               <div>
-                <span className="text-[10px] text-slate-400 block">Launch Cost:</span>
-                <span className={`font-bold font-mono-numbers ${canAfford ? 'text-white' : 'text-rose-400'}`}>
-                  ${currentCost.toLocaleString()}
-                </span>
+                <span className="text-slate-400">Launch Cost:</span>{' '}
+                <strong className={canAfford ? 'text-white' : 'text-rose-400'}>
+                  {currentCost.toLocaleString()} Cr
+                </strong>
               </div>
               <div>
-                <span className="text-[10px] text-slate-400 block">Net Profit:</span>
-                <span className="font-bold font-mono-numbers text-emerald-400">
-                  +${(selectedContract.rewardCash - currentCost).toLocaleString()}
-                </span>
+                <span className="text-slate-400">Net Bounty:</span>{' '}
+                <strong className="text-emerald-400">
+                  +{(selectedContract.rewardCash - currentCost).toLocaleString()} Cr
+                </strong>
               </div>
             </div>
 
-            <button
-              disabled={!canAfford || !canCarryPayload}
-              onClick={handleLaunchClick}
-              className={`px-5 sm:px-7 py-2.5 sm:py-3 rounded-xl font-bold font-mono text-xs sm:text-sm tracking-wider flex items-center gap-1.5 shadow-lg transition-all ${
-                canAfford && canCarryPayload
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-400 hover:to-blue-500 shadow-cyan-500/25 cursor-pointer active:scale-95'
-                  : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
-              }`}
-            >
-              <span>GO FOR LAUNCH</span>
-              <ArrowUpRight className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                onClick={() => setSelectedContract(null)}
+                className="w-1/3 sm:w-auto px-4 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 font-mono text-xs cursor-pointer"
+              >
+                Back
+              </button>
+
+              <button
+                disabled={!canAfford || !canCarryPayload || Boolean(koshaBlocked)}
+                onClick={handleLaunchClick}
+                className={`flex-1 sm:flex-initial px-6 py-2.5 rounded-xl font-mono font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all ${
+                  canAfford && canCarryPayload && !koshaBlocked
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white cursor-pointer active:scale-95 shadow-cyan-500/25'
+                    : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                }`}
+              >
+                <span>GO FOR LAUNCH</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       )}

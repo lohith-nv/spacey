@@ -1,6 +1,6 @@
 import React from 'react';
 import type { RocketModel, BoosterInventoryItem } from '../../types/game';
-import { Atom, ShieldCheck, Wrench, Trash2, CheckCircle2, Lock, Zap } from 'lucide-react';
+import { Atom, ShieldCheck, Wrench, Trash2, CheckCircle2, Lock, Zap, Compass } from 'lucide-react';
 import { sounds } from '../../utils/audio';
 
 interface HangarTabProps {
@@ -24,15 +24,15 @@ export const HangarTab: React.FC<HangarTabProps> = ({
       <div className="bg-slate-900/60 p-3.5 sm:p-4 rounded-xl border border-slate-800 flex items-center justify-between gap-3">
         <div>
           <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-            Vehicle Fleet & Recovery Hangar
+            Marga Fleet & Refurbishment Hangar
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Upgrade rocket classes and manage recovered reusable boosters.
+            Certify surface launchers, orbital tugs, and manage recovered reusable cores.
           </p>
         </div>
         <div className="bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-300 flex items-center gap-1.5 shrink-0">
           <Wrench className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Refurb: <strong className="text-emerald-400">READY</strong></span>
+          <span>Refurb: <strong className="text-emerald-400 font-bold">READY</strong></span>
         </div>
       </div>
 
@@ -40,10 +40,10 @@ export const HangarTab: React.FC<HangarTabProps> = ({
       <div>
         <h3 className="text-xs font-mono text-cyan-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
           <Zap className="w-3.5 h-3.5" />
-          Rocket Classes
+          Marga Vehicle Roster
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {rockets.map(rocket => {
             const canUnlock = science >= rocket.unlockCost;
             const inStockCount = hangarBoosters.filter(b => b.rocketId === rocket.id).length;
@@ -62,43 +62,71 @@ export const HangarTab: React.FC<HangarTabProps> = ({
                     <span className="text-2xl p-1.5 rounded-lg bg-slate-800/80 border border-slate-700/50">
                       {rocket.icon}
                     </span>
-                    {rocket.unlocked ? (
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/60 flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> CERTIFIED
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 flex items-center gap-1">
-                        <Lock className="w-3 h-3" /> LOCKED
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {rocket.sanskritRoot && (
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-800/50">
+                          {rocket.sanskritRoot}
+                        </span>
+                      )}
+                      {rocket.unlocked ? (
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/60 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> CERTIFIED
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 flex items-center gap-1">
+                          <Lock className="w-3 h-3" /> LOCKED
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  <h4 className="text-base font-bold text-white mt-2.5">{rocket.name}</h4>
-                  <p className="text-[11px] text-slate-400 mt-0.5">{rocket.tagline}</p>
+                  <div className="mt-2.5">
+                    <div className="flex items-baseline gap-1.5">
+                      <h4 className="text-base font-bold text-white">{rocket.name}</h4>
+                      {rocket.sanskritMeaning && (
+                        <span className="text-[11px] text-slate-400 font-mono italic">
+                          ({rocket.sanskritMeaning})
+                        </span>
+                      )}
+                    </div>
+                    {rocket.role && (
+                      <div className="text-[10px] font-mono text-cyan-400 mt-0.5">
+                        {rocket.role}
+                      </div>
+                    )}
+                    <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">{rocket.tagline}</p>
+                  </div>
 
                   {/* Compact Rocket Stats */}
                   <div className="mt-3.5 space-y-1.5 font-mono text-xs border-t border-slate-800 pt-3">
                     <div className="flex items-center justify-between text-slate-400 text-[11px]">
-                      <span>LEO Payload Cap:</span>
+                      <span>Payload Capacity:</span>
                       <span className="text-slate-200 font-semibold">{rocket.payloadCapacityKg.toLocaleString()} kg</span>
                     </div>
 
                     <div className="flex items-center justify-between text-slate-400 text-[11px]">
                       <span>New Build Cost:</span>
                       <span className="text-emerald-400 font-bold font-mono-numbers">
-                        ${rocket.cost.toLocaleString()}
+                        {rocket.cost.toLocaleString()} Cr
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between text-slate-400 text-[11px]">
                       <span>Refurb Re-flight:</span>
                       <span className="text-cyan-400 font-bold font-mono-numbers">
-                        ${Math.round(rocket.cost * rocket.refurbishCostPercent).toLocaleString()}
+                        {Math.round(rocket.cost * rocket.refurbishCostPercent).toLocaleString()} Cr
                         <span className="text-[10px] text-emerald-400 ml-1">
                           (-{Math.round((1 - rocket.refurbishCostPercent) * 100)}%)
                         </span>
                       </span>
                     </div>
+
+                    {rocket.requiresKosha && (
+                      <div className="text-[10px] text-amber-400 font-mono flex items-center gap-1 pt-1 border-t border-slate-800/80">
+                        <Compass className="w-3 h-3 shrink-0" />
+                        <span>Requires online Kosha for NTR stage refurb</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -125,7 +153,7 @@ export const HangarTab: React.FC<HangarTabProps> = ({
                       }`}
                     >
                       <Atom className="w-3.5 h-3.5" />
-                      <span>UNLOCK ({rocket.unlockCost} SCI)</span>
+                      <span>UNLOCK ({rocket.unlockCost} RP)</span>
                     </button>
                   )}
                 </div>
@@ -179,28 +207,25 @@ export const HangarTab: React.FC<HangarTabProps> = ({
                       <span>Integrity:</span>
                       <span className="text-emerald-400 font-bold">{booster.condition}%</span>
                     </div>
-                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800">
+                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
                       <div
-                        className="bg-emerald-500 h-full rounded-full transition-all duration-300"
+                        className="bg-emerald-500 h-full rounded-full transition-all"
                         style={{ width: `${booster.condition}%` }}
-                      ></div>
+                      />
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-3 pt-2.5 border-t border-slate-800 flex items-center justify-between">
-                  <span className="text-[10px] font-mono text-emerald-400 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                    Ready for flight
+                <div className="mt-3.5 pt-2 border-t border-slate-800 flex items-center justify-between">
+                  <span className="text-[11px] font-mono text-emerald-400 font-semibold">
+                    Re-flight Ready
                   </span>
-
                   <button
                     onClick={() => onScrapBooster(booster.id)}
-                    title="Scrap booster for parts ($35k + 10 Science)"
-                    className="p-1 rounded hover:bg-rose-950/60 text-slate-500 hover:text-rose-400 transition-all text-[11px] flex items-center gap-1 font-mono cursor-pointer"
+                    title="Scrap for 35,000 Cr & 10 RP"
+                    className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-slate-800/80 transition-colors cursor-pointer"
                   >
-                    <Trash2 className="w-3 h-3" />
-                    <span>Scrap</span>
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>

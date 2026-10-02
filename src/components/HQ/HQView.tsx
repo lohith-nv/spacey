@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { Contract, RocketModel, BoosterInventoryItem, TechUpgrade, MissionStats } from '../../types/game';
+import type { Contract, RocketModel, BoosterInventoryItem, TechUpgrade, MissionStats, KoshaDepot } from '../../types/game';
 import { OverviewTab } from './OverviewTab';
 import { ContractsTab } from './ContractsTab';
 import { HangarTab } from './HangarTab';
@@ -17,6 +17,8 @@ interface HQViewProps {
   rockets: RocketModel[];
   hangarBoosters: BoosterInventoryItem[];
   techTree: TechUpgrade[];
+  ariaTier?: number;
+  koshaDepots?: KoshaDepot[];
   onInitiateLaunch: (contract: Contract, rocket: RocketModel, boosterId?: string) => void;
   onUnlockRocket: (rocketId: string) => void;
   onScrapBooster: (boosterId: string) => void;
@@ -33,6 +35,8 @@ export const HQView: React.FC<HQViewProps> = ({
   rockets,
   hangarBoosters,
   techTree,
+  ariaTier = 0,
+  koshaDepots = [],
   onInitiateLaunch,
   onUnlockRocket,
   onScrapBooster,
@@ -92,6 +96,7 @@ export const HQView: React.FC<HQViewProps> = ({
             science={science}
             contracts={contracts}
             rockets={rockets}
+            ariaTier={ariaTier}
             onNavigateToContracts={() => setActiveTab('contracts')}
           />
         )}
@@ -102,6 +107,8 @@ export const HQView: React.FC<HQViewProps> = ({
             rockets={rockets}
             hangarBoosters={hangarBoosters}
             cash={cash}
+            ariaTier={ariaTier}
+            koshaDepots={koshaDepots}
             onInitiateLaunch={onInitiateLaunch}
           />
         )}
@@ -120,13 +127,17 @@ export const HQView: React.FC<HQViewProps> = ({
           <TechTab
             techTree={techTree}
             science={science}
+            ariaTier={ariaTier}
             onUpgradeTech={onUpgradeTech}
           />
         )}
       </div>
 
-      {/* Mobile Fixed Bottom Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800/90 z-50 px-2 py-1.5 flex items-center justify-around shadow-2xl safe-area-bottom">
+      {/* Fixed Mobile Bottom Dock */}
+      <nav
+        aria-label="Mobile Navigation Dock"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-950/95 backdrop-blur-lg border-t border-slate-800/90 px-3 py-1.5 safe-area-bottom flex items-center justify-around shadow-2xl"
+      >
         {navItems.map(item => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -135,21 +146,23 @@ export const HQView: React.FC<HQViewProps> = ({
               key={item.id}
               onClick={() => {
                 setActiveTab(item.id);
-                sounds.playBeep(600, 0.04);
+                sounds.playBeep(640, 0.03);
               }}
-              className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl transition-all cursor-pointer relative ${
-                isActive ? 'text-cyan-400 font-bold' : 'text-slate-400 font-normal hover:text-slate-200'
+              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all cursor-pointer relative ${
+                isActive ? 'text-cyan-400' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               <div className="relative">
-                <Icon className={`w-5 h-5 ${isActive ? 'text-cyan-400 scale-110' : 'text-slate-400'} transition-transform`} />
+                <Icon className={`w-5 h-5 ${isActive ? 'scale-110 text-cyan-400' : 'text-slate-400'}`} />
                 {item.badge !== undefined && item.badge > 0 && (
-                  <span className="absolute -top-1 -right-2.5 px-1 py-0.2 rounded-full text-[9px] font-mono font-bold bg-cyan-500 text-slate-950">
+                  <span className="absolute -top-1 -right-2.5 px-1 min-w-3.5 h-3.5 bg-cyan-500 text-slate-950 font-bold rounded-full text-[9px] flex items-center justify-center font-mono leading-none">
                     {item.badge}
                   </span>
                 )}
               </div>
-              <span className="text-[10px] mt-0.5 tracking-tight font-mono">{item.label}</span>
+              <span className={`text-[10px] font-mono mt-1 ${isActive ? 'font-bold text-cyan-300' : 'font-normal'}`}>
+                {item.label}
+              </span>
               {isActive && (
                 <span className="w-1 h-1 rounded-full bg-cyan-400 mt-0.5"></span>
               )}

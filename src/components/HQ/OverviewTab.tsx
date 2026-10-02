@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import type { MissionStats, Contract, RocketModel } from '../../types/game';
-import { Rocket, Satellite, DollarSign, Award, TrendingUp, Radio, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { ARIA_TIERS } from '../../data/initialData';
+import { Rocket, Satellite, Award, TrendingUp, Radio, ArrowRight, CheckCircle2, Cpu } from 'lucide-react';
 
 interface OverviewTabProps {
   stats: MissionStats;
@@ -10,6 +11,7 @@ interface OverviewTabProps {
   science: number;
   contracts: Contract[];
   rockets: RocketModel[];
+  ariaTier?: number;
   onNavigateToContracts: () => void;
 }
 
@@ -44,8 +46,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   cash,
   contracts,
   rockets,
+  ariaTier = 0,
   onNavigateToContracts,
 }) => {
+  const currentAria = ARIA_TIERS[ariaTier] || ARIA_TIERS[0];
   const recoveryRate = stats.totalLaunches > 0
     ? Math.round((stats.boostersLanded / stats.totalLaunches) * 100)
     : 0;
@@ -91,18 +95,20 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
         <div className="relative z-10 max-w-xl">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-700/50 text-cyan-300 text-[10px] font-mono uppercase tracking-wider mb-2 sm:mb-3">
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
-            Mission Operations Live
+            <Cpu className="w-3 h-3 text-cyan-400" />
+            <span>ARIA TIER {currentAria.tier}: {currentAria.name}</span>
+            <span className="text-slate-500">•</span>
+            <span className="text-emerald-400 font-bold">MARGA ONLINE</span>
           </div>
 
           <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
-            Launch Commercial Payloads.
+            The Shipping Line for Orbit.
             <span className="block bg-gradient-to-r from-cyan-300 via-sky-400 to-fuchsia-400 bg-clip-text text-transparent">
-              Recover & Re-fly Boosters.
+              Recover & Re-fly. Build the Marga.
             </span>
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 mt-2 sm:mt-3 leading-relaxed">
-            Deploy satellites to build recurring orbital revenue and guide rocket boosters back to ocean drone ships for massive reusability savings.
+            Launch with the starter <strong className="text-cyan-300 font-mono">Laghu</strong>, recover stages on ocean drone ships, deploy StarStream relays for continuous passive dividends, and build the first orbital depots.
           </p>
 
           <div className="mt-4 sm:mt-5 flex items-center gap-3">
@@ -114,7 +120,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <span>COMMENCE LAUNCH</span>
             </button>
             <div className="text-[11px] font-mono text-slate-400">
-              <span className="text-emerald-400 font-semibold">${cash.toLocaleString()}</span> ready
+              <span className="text-emerald-400 font-semibold">{cash.toLocaleString()} Cr</span> ready
             </div>
           </div>
         </div>
@@ -132,20 +138,20 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <div className="bg-cyan-950/30 border border-cyan-800/40 rounded-xl p-3.5 sm:p-4">
           <div className="text-xs font-mono text-cyan-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5" />
-            Quick Flight Steps
+            Quick Flight Steps (Act I: Laghu Yard)
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
             <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-2.5">
               <span className="text-cyan-400 font-bold font-mono">1. Select Contract</span>
-              <p className="text-slate-400 text-[11px] mt-0.5">Pick a customer payload in Missions.</p>
+              <p className="text-slate-400 text-[11px] mt-0.5">Accept Sensor Seeding I or a spot cargo hop.</p>
             </div>
             <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-2.5">
               <span className="text-cyan-400 font-bold font-mono">2. Ascent & Staging</span>
-              <p className="text-slate-400 text-[11px] mt-0.5">Ascend to 75 km Karman line for orbit.</p>
+              <p className="text-slate-400 text-[11px] mt-0.5">Throttle past Max-Q to 75 km Karman line.</p>
             </div>
             <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-2.5">
               <span className="text-cyan-400 font-bold font-mono">3. Land on Drone Ship</span>
-              <p className="text-slate-400 text-[11px] mt-0.5">Burn retros to recover the booster!</p>
+              <p className="text-slate-400 text-[11px] mt-0.5">Retro-burn on target to recover the Laghu core!</p>
             </div>
           </div>
         </div>
@@ -162,10 +168,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <Rocket className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <div className="text-[10px] font-mono text-emerald-400 uppercase tracking-wider">Next Recommended Mission</div>
+              <div className="text-[10px] font-mono text-emerald-400 uppercase tracking-wider">
+                {nextMission.act ? `Act ${nextMission.act} Priority Flight` : 'Next Recommended Flight'}
+              </div>
               <div className="text-sm font-bold text-white truncate">{nextMission.title}</div>
               <div className="text-[11px] text-slate-400 truncate">
-                {nextMissionRocket.name} • <span className="text-emerald-400 font-mono font-semibold">+${nextMission.rewardCash.toLocaleString()}</span>
+                {nextMissionRocket.name} {nextMissionRocket.sanskritRoot ? `(${nextMissionRocket.sanskritRoot})` : ''} •{' '}
+                <span className="text-emerald-400 font-mono font-semibold">+{nextMission.rewardCash.toLocaleString()} Cr</span>
+                <span className="text-purple-400 font-mono ml-2">+{nextMission.rewardScience} RP</span>
               </div>
             </div>
           </div>
@@ -177,7 +187,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               </span>
             ) : (
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-950/80 border border-amber-700/50 text-amber-300">
-                NEED ${(nextMissionRocket.cost - cash).toLocaleString()}
+                NEED {(nextMissionRocket.cost - cash).toLocaleString()} Cr
               </span>
             )}
             <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all" />
@@ -218,84 +228,57 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
             Reused Savings
           </div>
-          <div className="font-mono-numbers text-xl sm:text-2xl font-bold text-emerald-400 mt-1">
-            ${stats.totalSavings >= 1_000_000 ? `${(stats.totalSavings / 1_000_000).toFixed(1)}M` : stats.totalSavings.toLocaleString()}
+          <div className="font-mono-numbers text-xl sm:text-2xl font-bold text-emerald-400 mt-1 truncate">
+            {stats.totalSavings >= 1_000_000
+              ? `${(stats.totalSavings / 1_000_000).toFixed(2)}M Cr`
+              : stats.totalSavings >= 100_000
+              ? `${Math.round(stats.totalSavings / 1000)}k Cr`
+              : `${stats.totalSavings.toLocaleString()} Cr`}
           </div>
-          <div className="text-[10px] text-emerald-500 font-mono">
-            Fleet Refurbish
+          <div className="text-[10px] text-slate-400 font-mono">
+            Fleet Efficiency
           </div>
         </div>
 
         <div className="bg-slate-900/50 border border-slate-800 p-3 sm:p-4 rounded-xl">
           <div className="flex items-center gap-1.5 text-slate-400 text-[11px] font-mono">
-            <DollarSign className="w-3.5 h-3.5 text-purple-400" />
-            Lifetime Gross
+            <Radio className="w-3.5 h-3.5 text-cyan-400" />
+            StarStream Mesh
           </div>
-          <div className="font-mono-numbers text-xl sm:text-2xl font-bold text-purple-300 mt-1">
-            ${stats.totalEarnings >= 1_000_000 ? `${(stats.totalEarnings / 1_000_000).toFixed(1)}M` : stats.totalEarnings.toLocaleString()}
+          <div className="font-mono-numbers text-xl sm:text-2xl font-bold text-cyan-300 mt-1">
+            {satellites} Nodes
           </div>
-          <div className="text-[10px] text-slate-400 font-mono">
-            Total Revenue
+          <div className="text-[10px] text-emerald-400 font-mono">
+            +{passiveRate} Cr/sec passive
           </div>
         </div>
       </div>
 
-      {/* Orbit Constellation Telemetry Array */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 relative overflow-hidden">
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2">
-            <Satellite className="w-4 h-4 text-cyan-400" />
-            <h3 className="text-sm font-bold text-white">LEO Constellation Array</h3>
-            <span className="text-[10px] font-mono text-cyan-300 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-800/40">
-              {satellites} Active Nodes
-            </span>
+      {/* Mini Constellation & ARIA Status Card */}
+      <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-3.5 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center shrink-0">
+            <Satellite className="w-5 h-5 text-cyan-400 animate-spin" style={{ animationDuration: '24s' }} />
           </div>
-
-          <div className="text-[11px] font-mono text-cyan-300 flex items-center gap-1.5 bg-cyan-950/60 px-2.5 py-1 rounded-lg border border-cyan-800/50">
-            <Radio className="w-3 h-3 text-cyan-400 animate-pulse" />
-            <span>+${passiveRate}/s</span>
+          <div>
+            <h4 className="text-xs sm:text-sm font-bold text-white">
+              StarStream Global Optical Mesh
+            </h4>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              {satellites > 0
+                ? `${satellites} active relays in equatorial orbit delivering +${passiveRate} Cr/s passive dividends.`
+                : 'No relay nodes in orbit yet. Fly StarStream Relay Node #1 to start recurring passive income.'}
+            </p>
           </div>
         </div>
 
-        {/* Orbit Visualization */}
-        <div className="h-32 sm:h-40 w-full bg-slate-950 rounded-xl border border-slate-800/80 relative flex items-center justify-center overflow-hidden">
-          {/* Earth Globe */}
-          <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-blue-600 via-emerald-600 to-indigo-950 shadow-xl shadow-blue-500/20 flex items-center justify-center border border-cyan-400/40 z-10">
-            <div className="text-[9px] font-mono font-bold text-white uppercase tracking-wider text-center">
-              EARTH
-            </div>
-          </div>
-
-          {/* Orbit Rings */}
-          <div className="absolute w-40 h-40 sm:w-56 sm:h-56 rounded-full border border-cyan-500/20 border-dashed animate-spin" style={{ animationDuration: '45s' }}>
-            {Array.from({ length: Math.min(satellites, 10) }).map((_, i) => {
-              const angle = (i * 360) / Math.min(satellites, 10);
-              const rad = (angle * Math.PI) / 180;
-              const radius = 80;
-              const x = Math.cos(rad) * radius;
-              const y = Math.sin(rad) * radius;
-
-              return (
-                <div
-                  key={i}
-                  className="absolute w-2.5 h-2.5 rounded-full bg-cyan-400 shadow shadow-cyan-400 transform -translate-x-1/2 -translate-y-1/2"
-                  style={{
-                    left: `calc(50% + ${x}px)`,
-                    top: `calc(50% + ${y}px)`,
-                  }}
-                >
-                  <span className="w-1 h-1 rounded-full bg-white block m-auto mt-0.5 animate-ping"></span>
-                </div>
-              );
-            })}
-          </div>
-
-          {satellites === 0 && (
-            <div className="absolute bottom-2 text-center text-[10px] font-mono text-slate-500 z-20">
-              Launch "Constellation Node" contracts to generate continuous passive revenue.
-            </div>
-          )}
-        </div>
+        <button
+          onClick={onNavigateToContracts}
+          className="text-xs font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 cursor-pointer shrink-0 self-end sm:self-auto"
+        >
+          <span>View Manifest</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
       </div>
     </div>
   );
