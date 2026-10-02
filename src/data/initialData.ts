@@ -144,7 +144,20 @@ export const INITIAL_CONTRACTS: Contract[] = [
     isConstellationMission: true,
   },
 
-  // Act II: Vahana Line
+  // Act II: Vahana Line & Manifest Planner
+  {
+    id: 'contract-rideshare-hop',
+    title: 'LEO Express Rideshare Cluster',
+    client: 'Open Manifest Spot Market',
+    description: 'Multi-customer cubesat rideshare adapter. Fast turn, ideal filler payload for high-capacity manifest bundling.',
+    rewardCash: 240000,
+    rewardScience: 25,
+    payloadMassKg: 1100,
+    minRocketTier: 'vahana',
+    act: 2,
+    isSpotMarket: true,
+    isConstellationMission: false,
+  },
   {
     id: 'contract-sensor-seeding-2',
     title: 'Sensor Seeding II',
@@ -197,13 +210,28 @@ export const INITIAL_CONTRACTS: Contract[] = [
     isSpotMarket: false,
     isConstellationMission: false,
   },
+  {
+    id: 'contract-kosha-leo-foundation',
+    title: 'Kosha-LEO Core Module',
+    client: 'Spacey Infrastructure / ISRO-ESA',
+    description: 'Deliver the foundational pressurized core and docking ring for Kosha-LEO: the Earth orbit anchor depot of the Marga network.',
+    rewardCash: 1800000,
+    rewardScience: 160,
+    rewardPropellant: 600,
+    payloadMassKg: 8800,
+    minRocketTier: 'vahana',
+    act: 2,
+    isSpotMarket: false,
+    isConstellationMission: false,
+    unlocksDepotId: 'kosha-leo',
+  },
 
   // Act V / Capstone Preview
   {
     id: 'contract-chronos',
     title: 'Chronos Jovian Surveyor',
     client: 'AstroPhysics Institute',
-    description: 'Ion-thruster deep-space probe. Humanity\'s first permanent Jovian orbiter requiring deep-space staging.',
+    description: "Ion-thruster deep-space probe. Humanity's first permanent Jovian orbiter requiring deep-space staging.",
     rewardCash: 9000000,
     rewardScience: 400,
     payloadMassKg: 10000,
@@ -322,8 +350,8 @@ export const ARIA_TIERS: AriaTierInfo[] = [
     tier: 4,
     name: 'Deep-Space Autonomy',
     gate: 'Act V Unlock',
-    description: 'Missions beyond cislunar space operating without ground control under light-delay.',
-    features: ['Light-Delay Independence', 'Autonomous Jovian Insertion', 'Permanent Route Logistics'],
+    description: 'Outer solar system navigation beyond signal latency, autonomous rendezvous at Jupiter.',
+    features: ['Outer-System Autonomy', 'Jovian Transfer Routing', 'Radiation Hardening'],
   },
 ];
 
@@ -336,7 +364,7 @@ export const INITIAL_KOSHA_DEPOTS: KoshaDepot[] = [
     propellantCapacityKg: 50000,
     currentPropellantKg: 0,
     iceSupplyEstablished: false,
-    refurbishmentBayOnline: true,
+    refurbishmentBayOnline: false,
   },
   {
     id: 'kosha-cislunar',
@@ -346,7 +374,7 @@ export const INITIAL_KOSHA_DEPOTS: KoshaDepot[] = [
     propellantCapacityKg: 100000,
     currentPropellantKg: 0,
     iceSupplyEstablished: false,
-    refurbishmentBayOnline: true,
+    refurbishmentBayOnline: false,
   },
   {
     id: 'kosha-belt',
@@ -356,6 +384,6 @@ export const INITIAL_KOSHA_DEPOTS: KoshaDepot[] = [
     propellantCapacityKg: 250000,
     currentPropellantKg: 0,
     iceSupplyEstablished: false,
-    refurbishmentBayOnline: true,
+    refurbishmentBayOnline: false,
   },
 ];

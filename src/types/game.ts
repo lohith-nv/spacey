@@ -6,19 +6,19 @@ export interface RocketModel {
   sanskritRoot?: string;
   sanskritMeaning?: string;
   role?: string;
-  classType?: VehicleClassType;
+  classType: VehicleClassType;
   tagline: string;
-  cost: number; // Credits (Cr)
+  cost: number; // Cr
   payloadCapacityKg: number;
   fuelCapacity: number;
   engineThrust: number;
   dryMass: number;
   unlocked: boolean;
-  unlockCost: number; // Research (RP)
+  unlockCost: number; // RP
   reusable: boolean;
-  refurbishCostPercent: number; // e.g., 0.3 = 30% of cost if reused
-  stages?: number;
+  refurbishCostPercent: number;
   requiresKosha?: boolean;
+  stages?: number;
   icon: string;
 }
 
@@ -35,6 +35,7 @@ export interface Contract {
   act?: number; // Act 1 to 5
   isSpotMarket?: boolean; // Repeatable open manifest spot market
   isConstellationMission?: boolean; // Adds a passive StarStream relay node
+  unlocksDepotId?: string; // e.g. 'kosha-leo'
   completed?: boolean;
 }
 
@@ -70,6 +71,7 @@ export interface MissionStats {
 
 export interface ActiveMission {
   contract: Contract;
+  bundledContracts?: Contract[]; // ARIA Tier 1 multi-payload bundling
   rocket: RocketModel;
   usedBoosterId?: string;
   phase: 'countdown' | 'ascent' | 'meco' | 'landing' | 'debrief';

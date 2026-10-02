@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import type { RocketModel, Contract } from '../../types/game';
-import { Gauge, Flame, AlertCircle, ArrowUp } from 'lucide-react';
+import { Gauge, Flame, AlertCircle, ArrowUp, Layers } from 'lucide-react';
 import { sounds } from '../../utils/audio';
 
 interface AscentPhaseProps {
   rocket: RocketModel;
   contract: Contract;
+  bundledContracts?: Contract[];
   onAscentComplete: () => void;
   onAbort: () => void;
 }
@@ -13,6 +14,7 @@ interface AscentPhaseProps {
 export const AscentPhase: React.FC<AscentPhaseProps> = ({
   rocket,
   contract,
+  bundledContracts,
   onAscentComplete,
   onAbort,
 }) => {
@@ -24,6 +26,8 @@ export const AscentPhase: React.FC<AscentPhaseProps> = ({
   const [stageSeparationReady, setStageSeparationReady] = useState(false);
   const [stageSeparated, setStageSeparated] = useState(false);
   const [maxQPassed, setMaxQPassed] = useState(false);
+
+  const isBundled = Boolean(bundledContracts && bundledContracts.length > 1);
 
   const throttleRef = useRef(throttle);
 
@@ -118,20 +122,28 @@ export const AscentPhase: React.FC<AscentPhaseProps> = ({
               ? 'linear-gradient(to top, #1e3a8a 0%, #0f172a 100%)'
               : altitudeKm < 45
               ? 'linear-gradient(to top, #312e81 0%, #020617 100%)'
-              : 'linear-gradient(to top, #020617 0%, #000000 100%)',
-          opacity: 0.9,
+              : 'linear-gradient(to top, #0f172a 0%, #000000 100%)',
         }}
       ></div>
 
       {/* Top Telemetry Header */}
-      <div className="relative z-10 flex items-center justify-between gap-2 pb-2.5 border-b border-slate-800/80">
+      <div className="relative z-10 flex items-center justify-between pb-3 border-b border-slate-800/80">
         <div>
-          <div className="text-[10px] font-mono text-cyan-400 uppercase tracking-widest flex items-center gap-1.5">
+          <div className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
             Stage 1 Boost Phase
           </div>
-          <h2 className="text-sm sm:text-base font-bold text-white truncate">
-            {rocket.name} <span className="text-slate-400 font-normal">carrying</span> {contract.title}
+          <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2 truncate">
+            <span>{rocket.name}</span>
+            <span className="text-slate-400 font-normal">carrying</span>
+            {isBundled ? (
+              <span className="text-purple-300 font-mono flex items-center gap-1">
+                <Layers className="w-3.5 h-3.5 text-purple-400" />
+                {bundledContracts!.length} Bundled Payloads
+              </span>
+            ) : (
+              <span className="truncate">{contract.title}</span>
+            )}
           </h2>
         </div>
 
@@ -180,23 +192,23 @@ export const AscentPhase: React.FC<AscentPhaseProps> = ({
           </div>
 
           {/* Dynamic Pressure Q */}
-          <div className={`p-2.5 rounded-xl border transition-all ${
-            dynamicPressureQ > 65
-              ? 'bg-rose-950/60 border-rose-700/80 animate-pulse'
-              : 'bg-slate-900/80 border-slate-800'
-          }`}>
+          <div className="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl">
             <div className="flex items-center justify-between text-slate-400 text-[10px]">
               <span className="flex items-center gap-1">
-                <Gauge className="w-3 h-3 text-amber-400" /> Max-Q
+                <Gauge className="w-3 h-3 text-cyan-400" /> Max-Q
               </span>
-              <span className={`font-bold ${dynamicPressureQ > 65 ? 'text-rose-400' : 'text-amber-300'}`}>
+              <span
+                className={`font-bold ${
+                  dynamicPressureQ > 65 ? 'text-rose-400' : 'text-slate-300'
+                }`}
+              >
                 {dynamicPressureQ} kPa
               </span>
             </div>
             <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800 mt-1.5">
               <div
                 className={`h-full rounded-full transition-all duration-100 ${
-                  dynamicPressureQ > 65 ? 'bg-rose-500' : 'bg-amber-400'
+                  dynamicPressureQ > 65 ? 'bg-rose-500' : 'bg-cyan-400'
                 }`}
                 style={{ width: `${Math.min(100, (dynamicPressureQ / 85) * 100)}%` }}
               ></div>
@@ -319,20 +331,18 @@ export const AscentPhase: React.FC<AscentPhaseProps> = ({
                 <span>{stageSeparated ? 'MECO CONFIRMED!' : 'SEPARATE STAGE 1'}</span>
               </button>
             ) : (
-              <div className="text-center py-2 bg-slate-950/80 rounded-xl border border-slate-800/80 font-mono text-[11px] text-slate-500">
-                Climbing to MECO altitude (75 km)...
+              <div className="py-2.5 text-center text-[11px] font-mono text-slate-500 bg-slate-950/60 rounded-xl border border-slate-800">
+                Thrust to 75 km for MECO & Stage Sep
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Bottom Status Ticker */}
-      <div className="relative z-10 flex items-center justify-between text-[11px] font-mono text-slate-400 bg-slate-950/80 px-3 py-2 rounded-lg border border-slate-800/80">
-        <div>
-          Status: {stageSeparated ? 'MECO & Separation confirmed' : maxQPassed ? 'Supersonic climb' : 'Ascending'}
-        </div>
-        <div className="text-cyan-400">Booster Recovery: READY</div>
+      {/* Footer controls hint */}
+      <div className="relative z-10 text-[10px] font-mono text-slate-400 flex items-center justify-between pt-2 border-t border-slate-900">
+        <span className="hidden sm:inline">Controls: [W/S] or [↑/↓] Throttle, [SPACE] Stage Sep</span>
+        <span className="text-cyan-400">ARIA Autonomous Trajectory Guidance</span>
       </div>
     </div>
   );

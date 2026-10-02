@@ -4,7 +4,7 @@ import { CountdownPhase } from './CountdownPhase';
 import { AscentPhase } from './AscentPhase';
 import { BoosterLandingCanvas } from './BoosterLandingCanvas';
 import { MissionDebriefModal } from './MissionDebriefModal';
-import { Radio, ArrowLeft } from 'lucide-react';
+import { Radio, ArrowLeft, Layers } from 'lucide-react';
 
 interface LaunchDirectorProps {
   mission: ActiveMission;
@@ -26,6 +26,8 @@ export const LaunchDirector: React.FC<LaunchDirectorProps> = ({
   const [phase, setPhase] = useState<'countdown' | 'ascent' | 'landing' | 'debrief'>('countdown');
   const [boosterLanded, setBoosterLanded] = useState(false);
   const [boosterCondition, setBoosterCondition] = useState(0);
+
+  const isBundled = Boolean(mission.bundledContracts && mission.bundledContracts.length > 1);
 
   const launchCost = mission.usedBoosterId
     ? Math.round(mission.rocket.cost * mission.rocket.refurbishCostPercent)
@@ -78,7 +80,14 @@ export const LaunchDirector: React.FC<LaunchDirectorProps> = ({
               <Radio className="w-3 h-3 text-emerald-400 animate-pulse shrink-0" />
               <span>{mission.rocket.name}</span>
               <span className="text-slate-500">•</span>
-              <span className="text-slate-300 truncate">{mission.contract.title}</span>
+              {isBundled ? (
+                <span className="text-purple-300 flex items-center gap-1 truncate font-bold">
+                  <Layers className="w-3 h-3 text-purple-400 shrink-0" />
+                  {mission.bundledContracts!.length} Bundled Payloads
+                </span>
+              ) : (
+                <span className="text-slate-300 truncate">{mission.contract.title}</span>
+              )}
             </div>
           </div>
         </div>
@@ -117,6 +126,7 @@ export const LaunchDirector: React.FC<LaunchDirectorProps> = ({
           <CountdownPhase
             rocket={mission.rocket}
             contract={mission.contract}
+            bundledContracts={mission.bundledContracts}
             onLiftoff={handleLiftoff}
             onAbort={onAbort}
           />
@@ -126,6 +136,7 @@ export const LaunchDirector: React.FC<LaunchDirectorProps> = ({
           <AscentPhase
             rocket={mission.rocket}
             contract={mission.contract}
+            bundledContracts={mission.bundledContracts}
             onAscentComplete={handleAscentComplete}
             onAbort={onAbort}
           />
@@ -142,6 +153,7 @@ export const LaunchDirector: React.FC<LaunchDirectorProps> = ({
         {phase === 'debrief' && (
           <MissionDebriefModal
             contract={mission.contract}
+            bundledContracts={mission.bundledContracts}
             rocket={mission.rocket}
             boosterLanded={boosterLanded}
             boosterCondition={boosterCondition}

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import type { RocketModel, Contract } from '../../types/game';
 import { sounds } from '../../utils/audio';
-import { CheckCircle2, Play, AlertOctagon } from 'lucide-react';
+import { CheckCircle2, Play, AlertOctagon, Layers } from 'lucide-react';
 
 interface CountdownPhaseProps {
   rocket: RocketModel;
   contract: Contract;
+  bundledContracts?: Contract[];
   onLiftoff: () => void;
   onAbort: () => void;
 }
@@ -13,6 +14,7 @@ interface CountdownPhaseProps {
 export const CountdownPhase: React.FC<CountdownPhaseProps> = ({
   rocket,
   contract,
+  bundledContracts,
   onLiftoff,
   onAbort,
 }) => {
@@ -23,6 +25,11 @@ export const CountdownPhase: React.FC<CountdownPhaseProps> = ({
     { label: 'Flight Computer', ok: false },
     { label: 'Drone Ship Telemetry', ok: false },
   ]);
+
+  const isBundled = Boolean(bundledContracts && bundledContracts.length > 1);
+  const totalMass = bundledContracts
+    ? bundledContracts.reduce((sum, c) => sum + c.payloadMassKg, 0)
+    : contract.payloadMassKg;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -70,8 +77,17 @@ export const CountdownPhase: React.FC<CountdownPhaseProps> = ({
             <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
             Launch Pad 39-A • Automated Sequence
           </div>
-          <h2 className="text-base sm:text-xl font-bold text-white mt-0.5">
-            {rocket.name} <span className="text-slate-400 font-normal">carrying</span> {contract.title}
+          <h2 className="text-base sm:text-xl font-bold text-white mt-0.5 flex items-center gap-2">
+            <span>{rocket.name}</span>
+            <span className="text-slate-400 font-normal text-sm">carrying</span>
+            {isBundled ? (
+              <span className="text-purple-300 font-mono text-sm flex items-center gap-1 font-bold">
+                <Layers className="w-3.5 h-3.5 text-purple-400" />
+                {bundledContracts!.length} Bundled Payloads ({totalMass.toLocaleString()} kg)
+              </span>
+            ) : (
+              <span className="text-white text-sm font-semibold truncate">{contract.title}</span>
+            )}
           </h2>
         </div>
 
@@ -83,6 +99,21 @@ export const CountdownPhase: React.FC<CountdownPhaseProps> = ({
           <span className="hidden sm:inline">Hold /</span> Abort
         </button>
       </div>
+
+      {/* Bundled Payloads Quick Pill Strip */}
+      {isBundled && (
+        <div className="relative z-10 flex items-center gap-1.5 overflow-x-auto py-1">
+          {bundledContracts!.map(c => (
+            <span
+              key={c.id}
+              className="text-[10px] font-mono bg-purple-950/60 border border-purple-800/50 text-purple-200 px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1"
+            >
+              <span>{c.title}</span>
+              <span className="text-purple-400">({c.payloadMassKg} kg)</span>
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Center Countdown Display & Rocket Staging Pad */}
       <div className="relative z-10 my-6 flex flex-col items-center justify-center text-center">

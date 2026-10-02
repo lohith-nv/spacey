@@ -19,7 +19,7 @@ interface HQViewProps {
   techTree: TechUpgrade[];
   ariaTier?: number;
   koshaDepots?: KoshaDepot[];
-  onInitiateLaunch: (contract: Contract, rocket: RocketModel, boosterId?: string) => void;
+  onInitiateLaunch: (contract: Contract, rocket: RocketModel, boosterId?: string, bundledContracts?: Contract[]) => void;
   onUnlockRocket: (rocketId: string) => void;
   onScrapBooster: (boosterId: string) => void;
   onUpgradeTech: (techId: string) => void;

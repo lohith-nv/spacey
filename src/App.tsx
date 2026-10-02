@@ -31,7 +31,7 @@ interface SavedState {
   contracts?: Contract[];
   hangarBoosters?: BoosterInventoryItem[];
   techTree?: TechUpgrade[];
-  stats?: MissionStats;
+  stats?: MissionStats[];
 }
 
 const getSavedData = (): SavedState | null => {
@@ -106,7 +106,25 @@ const migrateContracts = (savedContracts?: Contract[]): Contract[] => {
   // If save had old contracts, upgrade to canonical manifest
   const hasLegacy = savedContracts.some(c => c.id === 'contract-cubesat-1' || c.minRocketTier === 'aether-hopper');
   if (hasLegacy) return INITIAL_CONTRACTS;
-  return savedContracts;
+
+  const mapped = [...savedContracts];
+  INITIAL_CONTRACTS.forEach(canon => {
+    if (!mapped.some(m => m.id === canon.id)) {
+      mapped.push(canon);
+    }
+  });
+  return mapped;
+};
+
+const migrateDepots = (savedDepots?: KoshaDepot[]): KoshaDepot[] => {
+  if (!savedDepots || savedDepots.length === 0) return INITIAL_KOSHA_DEPOTS;
+  const mapped = [...savedDepots];
+  INITIAL_KOSHA_DEPOTS.forEach(canon => {
+    if (!mapped.some(m => m.id === canon.id)) {
+      mapped.push(canon);
+    }
+  });
+  return mapped;
 };
 
 const migrateTechTree = (savedTech?: TechUpgrade[]): TechUpgrade[] => {
@@ -128,63 +146,68 @@ export function App() {
   const [science, setScience] = useState<number>(() => initial?.science ?? 25);
   const [satellites, setSatellites] = useState<number>(() => initial?.satellites ?? 0);
   const [ariaTier, setAriaTier] = useState<number>(() => initial?.ariaTier ?? 0);
-  const [companyName] = useState<string>('SPACEY AEROSPACE');
-  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
+  const [koshaDepots, setKoshaDepots] = useState<KoshaDepot[]>(() => migrateDepots(initial?.koshaDepots));
 
-  // Fleet & Manifest
   const [rockets, setRockets] = useState<RocketModel[]>(() => migrateRockets(initial?.rockets));
   const [contracts] = useState<Contract[]>(() => migrateContracts(initial?.contracts));
   const [hangarBoosters, setHangarBoosters] = useState<BoosterInventoryItem[]>(() => migrateBoosters(initial?.hangarBoosters));
   const [techTree, setTechTree] = useState<TechUpgrade[]>(() => migrateTechTree(initial?.techTree));
-  const [koshaDepots] = useState<KoshaDepot[]>(() => initial?.koshaDepots ?? INITIAL_KOSHA_DEPOTS);
 
-  const [stats, setStats] = useState<MissionStats>(() => initial?.stats ?? {
-    totalLaunches: 0,
-    successfulOrbits: 0,
-    boostersLanded: 0,
-    totalEarnings: 0,
-    totalSavings: 0,
+  const [stats, setStats] = useState<MissionStats>(() => {
+    const s = initial?.stats as unknown as MissionStats | undefined;
+    return (
+      s ?? {
+        totalLaunches: 0,
+        successfulOrbits: 0,
+        boostersLanded: 0,
+        totalEarnings: 0,
+        totalSavings: 0,
+      }
+    );
   });
 
   const [activeMission, setActiveMission] = useState<ActiveMission | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const companyName = 'SPACEY';
 
-  // Save to local storage on state change
-  const saveTimeout = useRef<number | null>(null);
+  // Compute StarStream passive rate
+  const bandwidthTech = techTree.find(t => t.id === 'tech-relay-tuning');
+  const baseRatePerSat = 40;
+  const bonusPerSat = bandwidthTech && bandwidthTech.unlocked ? bandwidthTech.level * bandwidthTech.statBonus : 0;
+  const passiveRate = satellites * (baseRatePerSat + bonusPerSat);
+
+  // Autosave tracking
+  const isFirstMount = useRef(true);
   useEffect(() => {
-    if (saveTimeout.current) clearTimeout(saveTimeout.current);
-    saveTimeout.current = window.setTimeout(() => {
-      try {
-        localStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify({
-            cash,
-            science,
-            satellites,
-            ariaTier,
-            koshaDepots,
-            rockets,
-            contracts,
-            hangarBoosters,
-            techTree,
-            stats,
-          })
-        );
-      } catch {
-        // ignore
-      }
-    }, 400);
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    const stateToSave = {
+      cash,
+      science,
+      satellites,
+      ariaTier,
+      koshaDepots,
+      rockets,
+      contracts,
+      hangarBoosters,
+      techTree,
+      stats,
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+    } catch {
+      // Ignore quota storage errors
+    }
   }, [cash, science, satellites, ariaTier, koshaDepots, rockets, contracts, hangarBoosters, techTree, stats]);
 
-  // Calculate passive StarStream income rate (Cr/sec)
-  const relayTech = techTree.find(t => t.id === 'tech-relay-tuning');
-  const ratePerSat = 25 + (relayTech ? relayTech.level * relayTech.statBonus : 0);
-  const passiveRate = satellites * ratePerSat;
-
-  // Passive income tick interval
+  // Passive StarStream Revenue Tick (Every 1 second)
   useEffect(() => {
+    if (passiveRate <= 0) return;
     const timer = setInterval(() => {
-      if (passiveRate > 0) {
-        setCash(prev => prev + passiveRate);
+      setCash(prev => prev + passiveRate);
+      if (stats) {
         setStats(prev => ({
           ...prev,
           totalEarnings: prev.totalEarnings + passiveRate,
@@ -192,7 +215,7 @@ export function App() {
       }
     }, 1000);
     return () => clearInterval(timer);
-  }, [passiveRate]);
+  }, [passiveRate, stats]);
 
   // Sound toggle
   const handleToggleSound = () => {
@@ -202,7 +225,12 @@ export function App() {
   };
 
   // Launch Initiation
-  const handleInitiateLaunch = (contract: Contract, rocket: RocketModel, boosterId?: string) => {
+  const handleInitiateLaunch = (
+    contract: Contract,
+    rocket: RocketModel,
+    boosterId?: string,
+    bundledContracts?: Contract[]
+  ) => {
     const launchCost = boosterId
       ? Math.round(rocket.cost * rocket.refurbishCostPercent)
       : rocket.cost;
@@ -222,6 +250,7 @@ export function App() {
 
     setActiveMission({
       contract,
+      bundledContracts,
       rocket,
       usedBoosterId: boosterId,
       phase: 'countdown',
@@ -236,21 +265,37 @@ export function App() {
   }) => {
     if (!activeMission) return;
 
-    const { contract, rocket, usedBoosterId } = activeMission;
+    const { contract, bundledContracts, rocket, usedBoosterId } = activeMission;
     const launchCost = usedBoosterId
       ? Math.round(rocket.cost * rocket.refurbishCostPercent)
       : rocket.cost;
 
     const savingsAchieved = usedBoosterId ? rocket.cost - launchCost : 0;
 
+    const contractsToFinalize =
+      bundledContracts && bundledContracts.length > 0 ? bundledContracts : [contract];
+
+    const totalGrossCash = contractsToFinalize.reduce((sum, c) => sum + c.rewardCash, 0);
+    const totalBaseScience = contractsToFinalize.reduce((sum, c) => sum + c.rewardScience, 0);
+    const scienceGained = totalBaseScience + (outcome.boosterLanded ? 15 : 5);
+    const constellationNodes = contractsToFinalize.filter(c => c.isConstellationMission).length;
+
     // Award cash & research points
-    const scienceGained = contract.rewardScience + (outcome.boosterLanded ? 15 : 5);
-    setCash(prev => prev + contract.rewardCash);
+    setCash(prev => prev + totalGrossCash);
     setScience(prev => prev + scienceGained);
 
     // Add satellite to StarStream mesh if applicable
-    if (contract.isConstellationMission) {
-      setSatellites(prev => prev + 1);
+    if (constellationNodes > 0) {
+      setSatellites(prev => prev + constellationNodes);
+    }
+
+    // Check if any contract unlocked a Kosha depot (e.g. Kosha-LEO)
+    const unlockedDepotContract = contractsToFinalize.find(c => c.unlocksDepotId);
+    if (unlockedDepotContract && unlockedDepotContract.unlocksDepotId) {
+      const depotId = unlockedDepotContract.unlocksDepotId;
+      setKoshaDepots(prev =>
+        prev.map(depot => (depot.id === depotId ? { ...depot, unlocked: true } : depot))
+      );
     }
 
     // Add landed booster to hangar
@@ -272,7 +317,7 @@ export function App() {
       totalLaunches: prev.totalLaunches + 1,
       successfulOrbits: prev.successfulOrbits + 1,
       boostersLanded: prev.boostersLanded + (outcome.boosterLanded ? 1 : 0),
-      totalEarnings: prev.totalEarnings + contract.rewardCash,
+      totalEarnings: prev.totalEarnings + totalGrossCash,
       totalSavings: prev.totalSavings + savingsAchieved,
     }));
 
