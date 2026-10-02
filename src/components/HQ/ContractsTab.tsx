@@ -545,7 +545,7 @@ export const ContractsTab: React.FC<ContractsTabProps> = ({
 
       {/* Flight Preparation Drawer / Modal (Single Flight Mode) */}
       {selectedContract && !manifestMode && (
-        <div className="fixed inset-x-0 bottom-0 sm:static bg-slate-900 border-t sm:border border-cyan-500/50 sm:rounded-2xl p-4 sm:p-6 shadow-2xl z-50 max-h-[85vh] sm:max-h-none overflow-y-auto">
+        <div className="fixed inset-x-0 bottom-0 sm:static bg-slate-900 border-t sm:border border-cyan-500/50 sm:rounded-2xl p-4 pb-24 sm:p-6 sm:pb-6 shadow-2xl z-50 max-h-[85vh] sm:max-h-none overflow-y-auto">
           <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
             <div>
               <div className="text-[10px] font-mono text-cyan-400 uppercase tracking-widest">
