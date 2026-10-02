@@ -19,7 +19,13 @@ interface HQViewProps {
   techTree: TechUpgrade[];
   ariaTier?: number;
   koshaDepots?: KoshaDepot[];
-  onInitiateLaunch: (contract: Contract, rocket: RocketModel, boosterId?: string, bundledContracts?: Contract[]) => void;
+  onInitiateLaunch: (
+    contract: Contract,
+    rocket: RocketModel,
+    boosterId?: string,
+    bundledContracts?: Contract[],
+    isAutoLand?: boolean
+  ) => void;
   onUnlockRocket: (rocketId: string) => void;
   onScrapBooster: (boosterId: string) => void;
   onUpgradeTech: (techId: string) => void;
@@ -109,6 +115,8 @@ export const HQView: React.FC<HQViewProps> = ({
             cash={cash}
             ariaTier={ariaTier}
             koshaDepots={koshaDepots}
+            manualLandingsCount={stats.manualLandingsCount}
+            techTree={techTree}
             onInitiateLaunch={onInitiateLaunch}
           />
         )}
@@ -127,49 +135,10 @@ export const HQView: React.FC<HQViewProps> = ({
           <TechTab
             techTree={techTree}
             science={science}
-            ariaTier={ariaTier}
             onUpgradeTech={onUpgradeTech}
           />
         )}
       </div>
-
-      {/* Fixed Mobile Bottom Dock */}
-      <nav
-        aria-label="Mobile Navigation Dock"
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-950/95 backdrop-blur-lg border-t border-slate-800/90 px-3 py-1.5 safe-area-bottom flex items-center justify-around shadow-2xl"
-      >
-        {navItems.map(item => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => {
-                setActiveTab(item.id);
-                sounds.playBeep(640, 0.03);
-              }}
-              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all cursor-pointer relative ${
-                isActive ? 'text-cyan-400' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <div className="relative">
-                <Icon className={`w-5 h-5 ${isActive ? 'scale-110 text-cyan-400' : 'text-slate-400'}`} />
-                {item.badge !== undefined && item.badge > 0 && (
-                  <span className="absolute -top-1 -right-2.5 px-1 min-w-3.5 h-3.5 bg-cyan-500 text-slate-950 font-bold rounded-full text-[9px] flex items-center justify-center font-mono leading-none">
-                    {item.badge}
-                  </span>
-                )}
-              </div>
-              <span className={`text-[10px] font-mono mt-1 ${isActive ? 'font-bold text-cyan-300' : 'font-normal'}`}>
-                {item.label}
-              </span>
-              {isActive && (
-                <span className="w-1 h-1 rounded-full bg-cyan-400 mt-0.5"></span>
-              )}
-            </button>
-          );
-        })}
-      </nav>
     </div>
   );
 };

@@ -8,6 +8,7 @@ interface AscentPhaseProps {
   contract: Contract;
   bundledContracts?: Contract[];
   onAscentComplete: () => void;
+  onAscentFailure?: () => void;
   onAbort: () => void;
 }
 
@@ -16,6 +17,7 @@ export const AscentPhase: React.FC<AscentPhaseProps> = ({
   contract,
   bundledContracts,
   onAscentComplete,
+  onAscentFailure,
   onAbort,
 }) => {
   const [altitudeKm, setAltitudeKm] = useState(0);
@@ -26,10 +28,12 @@ export const AscentPhase: React.FC<AscentPhaseProps> = ({
   const [stageSeparationReady, setStageSeparationReady] = useState(false);
   const [stageSeparated, setStageSeparated] = useState(false);
   const [maxQPassed, setMaxQPassed] = useState(false);
+  const [ascentFailed, setAscentFailed] = useState(false);
 
   const isBundled = Boolean(bundledContracts && bundledContracts.length > 1);
 
   const throttleRef = useRef(throttle);
+  const failureTriggeredRef = useRef(false);
 
   useEffect(() => {
     throttleRef.current = throttle;
@@ -45,18 +49,19 @@ export const AscentPhase: React.FC<AscentPhaseProps> = ({
   }, []);
 
   const handleStageSep = useCallback(() => {
-    if (stageSeparated) return;
+    if (stageSeparated || ascentFailed) return;
     setStageSeparated(true);
     sounds.playBeep(1200, 0.35, 'triangle');
     setTimeout(() => {
       sounds.playSuccess();
       onAscentComplete();
     }, 1400);
-  }, [stageSeparated, onAscentComplete]);
+  }, [stageSeparated, ascentFailed, onAscentComplete]);
 
   // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (ascentFailed) return;
       if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
         setThrottle(prev => Math.min(1.0, prev + 0.05));
       } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
@@ -67,11 +72,13 @@ export const AscentPhase: React.FC<AscentPhaseProps> = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [stageSeparationReady, stageSeparated, handleStageSep]);
+  }, [stageSeparationReady, stageSeparated, handleStageSep, ascentFailed]);
 
   // Ascent physics tick
   useEffect(() => {
     const interval = setInterval(() => {
+      if (failureTriggeredRef.current) return;
+
       setAltitudeKm(alt => {
         if (alt >= 75) {
           if (!stageSeparationReady) {
@@ -97,19 +104,36 @@ export const AscentPhase: React.FC<AscentPhaseProps> = ({
         }
 
         // Stress increases if Q > 65 kPa
-        if (currentQ > 65) {
-          setStructuralStress(stress => Math.min(100, stress + 1.2));
-          if (Math.random() < 0.2) sounds.playAlarm();
-        } else {
-          setStructuralStress(stress => Math.max(0, stress - 1.5));
-        }
+        setStructuralStress(stress => {
+          let nextStress = stress;
+          if (currentQ > 65) {
+            nextStress = Math.min(100, stress + 1.2);
+            if (Math.random() < 0.2) sounds.playAlarm();
+          } else {
+            nextStress = Math.max(0, stress - 1.5);
+          }
+
+          // Check catastrophic Max-Q structural breakup failure
+          if (nextStress >= 100 && !failureTriggeredRef.current) {
+            failureTriggeredRef.current = true;
+            setAscentFailed(true);
+            sounds.stopEngine();
+            sounds.playExplosion();
+            if (onAscentFailure) {
+              setTimeout(() => {
+                onAscentFailure();
+              }, 1800);
+            }
+          }
+          return nextStress;
+        });
 
         return newAlt;
       });
     }, 60);
 
     return () => clearInterval(interval);
-  }, [stageSeparationReady]);
+  }, [stageSeparationReady, onAscentFailure]);
 
   return (
     <div className="relative w-full rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 p-3.5 sm:p-6 shadow-2xl flex flex-col justify-between min-h-[500px]">
@@ -125,6 +149,22 @@ export const AscentPhase: React.FC<AscentPhaseProps> = ({
               : 'linear-gradient(to top, #0f172a 0%, #000000 100%)',
         }}
       ></div>
+
+      {/* Catastrophic Structural Breakup (RUD) Failure Overlay */}
+      {ascentFailed && (
+        <div className="absolute inset-0 bg-rose-950/95 z-50 flex flex-col items-center justify-center p-6 text-center animate-fade-in backdrop-blur-sm">
+          <AlertCircle className="w-16 h-16 text-rose-400 animate-pulse mb-3" />
+          <h2 className="text-xl sm:text-2xl font-bold text-white font-mono">
+            MAX-Q CATASTROPHIC VEHICLE BREAKUP (RUD)
+          </h2>
+          <p className="text-xs sm:text-sm text-rose-200 mt-2 max-w-md">
+            Aerodynamic dynamic pressure exceeded structural envelope (100% stress). Vehicle and payload lost during ascent.
+          </p>
+          <div className="mt-4 text-xs font-mono text-slate-400">
+            Telemetry recorded &bull; Routing to flight debrief...
+          </div>
+        </div>
+      )}
 
       {/* Top Telemetry Header */}
       <div className="relative z-10 flex items-center justify-between pb-3 border-b border-slate-800/80">

@@ -1,6 +1,6 @@
 import React from 'react';
 import type { RocketModel, BoosterInventoryItem } from '../../types/game';
-import { Atom, ShieldCheck, Wrench, Trash2, CheckCircle2, Lock, Zap, Compass } from 'lucide-react';
+import { Atom, ShieldCheck, Wrench, Trash2, CheckCircle2, Lock, Zap, Compass, AlertTriangle } from 'lucide-react';
 import { sounds } from '../../utils/audio';
 
 interface HangarTabProps {
@@ -181,55 +181,80 @@ export const HangarTab: React.FC<HangarTabProps> = ({
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {hangarBoosters.map(booster => (
-              <div
-                key={booster.id}
-                className="bg-slate-900/80 border border-emerald-900/60 rounded-xl p-3.5 flex flex-col justify-between hover:border-emerald-700/80 transition-all shadow-sm"
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-emerald-950 flex items-center justify-center border border-emerald-700/50">
-                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            {hangarBoosters.map(booster => {
+              const matchingRocket = rockets.find(r => r.id === booster.rocketId);
+              const refurbRate = booster.refurbCostMultiplier ?? (booster.isHardLanding ? 0.70 : (matchingRocket?.refurbishCostPercent ?? 0.30));
+              const refurbCost = matchingRocket ? Math.round(matchingRocket.cost * refurbRate) : 0;
+
+              return (
+                <div
+                  key={booster.id}
+                  className={`bg-slate-900/80 rounded-xl p-3.5 flex flex-col justify-between transition-all shadow-sm border ${
+                    booster.isHardLanding
+                      ? 'border-amber-800/80 hover:border-amber-600'
+                      : 'border-emerald-900/60 hover:border-emerald-700/80'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center border ${
+                            booster.isHardLanding
+                              ? 'bg-amber-950 border-amber-700/50 text-amber-400'
+                              : 'bg-emerald-950 border-emerald-700/50 text-emerald-400'
+                          }`}
+                        >
+                          {booster.isHardLanding ? <AlertTriangle className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
+                        </div>
+                        <div>
+                          <div className="font-mono font-bold text-white text-xs">{booster.id}</div>
+                          <div className="text-[10px] text-slate-400">{booster.rocketName}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-mono font-bold text-white text-xs">{booster.id}</div>
-                        <div className="text-[10px] text-slate-400">{booster.rocketName}</div>
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                        {booster.flightsCompleted} Flight{booster.flightsCompleted === 1 ? '' : 's'}
+                      </span>
+                    </div>
+
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-1">
+                        <span>Integrity:</span>
+                        <span className={booster.isHardLanding ? 'text-amber-400 font-bold' : 'text-emerald-400 font-bold'}>
+                          {booster.condition}% {booster.isHardLanding ? '(Hard Landing)' : ''}
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            booster.isHardLanding ? 'bg-amber-500' : 'bg-emerald-500'
+                          }`}
+                          style={{ width: `${booster.condition}%` }}
+                        />
                       </div>
                     </div>
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-900/40 text-emerald-300 border border-emerald-700/40">
-                      {booster.flightsCompleted} Flight{booster.flightsCompleted === 1 ? '' : 's'}
+
+                    <div className="mt-2 text-[10px] font-mono flex items-center justify-between text-slate-400">
+                      <span>Refurb Cost ({Math.round(refurbRate * 100)}%):</span>
+                      <span className="text-cyan-300 font-semibold">{refurbCost.toLocaleString()} Cr</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-3.5 pt-2 border-t border-slate-800 flex items-center justify-between">
+                    <span className="text-[11px] font-mono text-emerald-400 font-semibold">
+                      Re-flight Ready
                     </span>
-                  </div>
-
-                  <div className="mt-3">
-                    <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-1">
-                      <span>Integrity:</span>
-                      <span className="text-emerald-400 font-bold">{booster.condition}%</span>
-                    </div>
-                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                      <div
-                        className="bg-emerald-500 h-full rounded-full transition-all"
-                        style={{ width: `${booster.condition}%` }}
-                      />
-                    </div>
+                    <button
+                      onClick={() => onScrapBooster(booster.id)}
+                      title="Scrap for 35,000 Cr & 10 RP"
+                      className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-slate-800/80 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
-
-                <div className="mt-3.5 pt-2 border-t border-slate-800 flex items-center justify-between">
-                  <span className="text-[11px] font-mono text-emerald-400 font-semibold">
-                    Re-flight Ready
-                  </span>
-                  <button
-                    onClick={() => onScrapBooster(booster.id)}
-                    title="Scrap for 35,000 Cr & 10 RP"
-                    className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-slate-800/80 transition-colors cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

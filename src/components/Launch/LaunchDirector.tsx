@@ -3,16 +3,26 @@ import type { ActiveMission, TechUpgrade } from '../../types/game';
 import { CountdownPhase } from './CountdownPhase';
 import { AscentPhase } from './AscentPhase';
 import { BoosterLandingCanvas } from './BoosterLandingCanvas';
+import { AriaAutoLandSequence } from './AriaAutoLandSequence';
 import { MissionDebriefModal } from './MissionDebriefModal';
 import { Radio, ArrowLeft, Layers } from 'lucide-react';
 
 interface LaunchDirectorProps {
   mission: ActiveMission;
   techTree: TechUpgrade[];
+  usedBoosterCondition?: number;
+  loanWithholding?: number;
+  loanPayoutsRemaining?: number;
+  act?: number;
   onMissionFinalized: (outcome: {
     orbitSuccess: boolean;
     boosterLanded: boolean;
     boosterCondition: number;
+    isHardLanding?: boolean;
+    isAutoLand?: boolean;
+    ascentFailed?: boolean;
+    stagesRecovered?: number;
+    totalStages?: number;
   }) => void;
   onAbort: () => void;
 }
@@ -20,12 +30,20 @@ interface LaunchDirectorProps {
 export const LaunchDirector: React.FC<LaunchDirectorProps> = ({
   mission,
   techTree,
+  usedBoosterCondition = 100,
+  loanWithholding = 0,
+  loanPayoutsRemaining = 0,
+  act = 1,
   onMissionFinalized,
   onAbort,
 }) => {
   const [phase, setPhase] = useState<'countdown' | 'ascent' | 'landing' | 'debrief'>('countdown');
   const [boosterLanded, setBoosterLanded] = useState(false);
   const [boosterCondition, setBoosterCondition] = useState(0);
+  const [isHardLanding, setIsHardLanding] = useState(false);
+  const [ascentFailed, setAscentFailed] = useState(false);
+  const [stagesRecovered, setStagesRecovered] = useState<number | undefined>(undefined);
+  const [totalStages, setTotalStages] = useState<number | undefined>(undefined);
 
   const isBundled = Boolean(mission.bundledContracts && mission.bundledContracts.length > 1);
 
@@ -42,24 +60,52 @@ export const LaunchDirector: React.FC<LaunchDirectorProps> = ({
     setPhase('landing');
   };
 
-  const handleLandingComplete = (success: boolean, condition: number) => {
+  const handleAscentFailure = () => {
+    setAscentFailed(true);
+    setBoosterLanded(false);
+    setBoosterCondition(0);
+    setPhase('debrief');
+  };
+
+  const handleLandingComplete = (success: boolean, condition: number, hardLanding?: boolean) => {
     setBoosterLanded(success);
     setBoosterCondition(condition);
+    setIsHardLanding(Boolean(hardLanding));
+    setPhase('debrief');
+  };
+
+  const handleAutoLandingComplete = (outcome: {
+    orbitSuccess: boolean;
+    boosterLanded: boolean;
+    boosterCondition: number;
+    isAutoLand: boolean;
+    stagesRecovered?: number;
+    totalStages?: number;
+  }) => {
+    setBoosterLanded(outcome.boosterLanded);
+    setBoosterCondition(outcome.boosterCondition);
+    setStagesRecovered(outcome.stagesRecovered);
+    setTotalStages(outcome.totalStages);
     setPhase('debrief');
   };
 
   const handleDebriefClose = () => {
     onMissionFinalized({
-      orbitSuccess: true,
+      orbitSuccess: !ascentFailed,
       boosterLanded,
       boosterCondition,
+      isHardLanding,
+      isAutoLand: mission.isAutoLand,
+      ascentFailed,
+      stagesRecovered,
+      totalStages,
     });
   };
 
   const phases = [
     { id: 'countdown', label: 'COUNTDOWN' },
     { id: 'ascent', label: 'ASCENT & MECO' },
-    { id: 'landing', label: 'BOOSTER RECOVERY' },
+    { id: 'landing', label: mission.isAutoLand ? 'ARIA AUTOLAND' : 'BOOSTER RECOVERY' },
     { id: 'debrief', label: 'DEBRIEF' },
   ];
 
@@ -138,17 +184,27 @@ export const LaunchDirector: React.FC<LaunchDirectorProps> = ({
             contract={mission.contract}
             bundledContracts={mission.bundledContracts}
             onAscentComplete={handleAscentComplete}
+            onAscentFailure={handleAscentFailure}
             onAbort={onAbort}
           />
         )}
 
-        {phase === 'landing' && (
-          <BoosterLandingCanvas
-            rocket={mission.rocket}
-            techTree={techTree}
-            onLandingComplete={handleLandingComplete}
-          />
-        )}
+        {phase === 'landing' &&
+          (mission.isAutoLand ? (
+            <AriaAutoLandSequence
+              rocket={mission.rocket}
+              techTree={techTree}
+              usedBoosterCondition={usedBoosterCondition}
+              act={act}
+              onAutoLandingComplete={handleAutoLandingComplete}
+            />
+          ) : (
+            <BoosterLandingCanvas
+              rocket={mission.rocket}
+              techTree={techTree}
+              onLandingComplete={handleLandingComplete}
+            />
+          ))}
 
         {phase === 'debrief' && (
           <MissionDebriefModal
@@ -157,7 +213,12 @@ export const LaunchDirector: React.FC<LaunchDirectorProps> = ({
             rocket={mission.rocket}
             boosterLanded={boosterLanded}
             boosterCondition={boosterCondition}
+            isHardLanding={isHardLanding}
+            isAutoLand={mission.isAutoLand}
+            ascentFailed={ascentFailed}
             launchCost={launchCost}
+            loanWithholding={loanWithholding}
+            loanPayoutsRemaining={loanPayoutsRemaining}
             onClose={handleDebriefClose}
           />
         )}

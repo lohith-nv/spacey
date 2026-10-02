@@ -9,7 +9,7 @@ export const INITIAL_ROCKETS: RocketModel[] = [
     role: 'Light, fast-turnaround starter launcher',
     classType: 'surface-launcher',
     tagline: 'Light, fast-turnaround launcher. Light payloads to LEO; lands itself.',
-    cost: 400000, // 400k Cr
+    cost: 120000, // 120k Cr (invariant: start cash 400k >= 3 * launch cost)
     payloadCapacityKg: 1000,
     fuelCapacity: 100,
     engineThrust: 48,
@@ -29,7 +29,7 @@ export const INITIAL_ROCKETS: RocketModel[] = [
     role: 'Fully reusable two-stage workhorse',
     classType: 'surface-launcher',
     tagline: 'Fully reusable two-stage workhorse. Both stages return to Earth.',
-    cost: 650000, // 650k Cr
+    cost: 330000, // 330k Cr (~100k refurb)
     payloadCapacityKg: 9000,
     fuelCapacity: 160,
     engineThrust: 85,
@@ -37,7 +37,7 @@ export const INITIAL_ROCKETS: RocketModel[] = [
     unlocked: false,
     unlockCost: 70, // 70 RP
     reusable: true,
-    refurbishCostPercent: 0.25,
+    refurbishCostPercent: 0.30,
     stages: 2,
     icon: '🛰️',
   },
@@ -68,7 +68,7 @@ export const INITIAL_ROCKETS: RocketModel[] = [
     role: 'Heavy-lift launcher with nuclear thermal upper stage',
     classType: 'surface-launcher',
     tagline: 'Reusable booster lands on Earth; nuclear stage ignites above LEO for outer lanes.',
-    cost: 4200000, // 4.2M Cr
+    cost: 2800000, // 2.8M Cr (~560k refurb)
     payloadCapacityKg: 40000,
     fuelCapacity: 280,
     engineThrust: 150,
@@ -122,7 +122,7 @@ export const INITIAL_CONTRACTS: Contract[] = [
     title: 'Suborbital Cargo Hop',
     client: 'Open Manifest',
     description: 'Spot-market rapid delivery flight. Fast turnaround, market-rate pay, reliable cash flow.',
-    rewardCash: 90000,
+    rewardCash: 100000, // Raised to 100k Cr
     rewardScience: 10,
     payloadMassKg: 200,
     minRocketTier: 'laghu',
@@ -258,8 +258,8 @@ export const INITIAL_TECH: TechUpgrade[] = [
   {
     id: 'tech-settling-thrusters',
     name: 'Cold-Gas Settling Thrusters',
-    category: 'avionics',
-    description: 'Nitrogen gas thruster pods along the interstage for rapid attitude correction.',
+    category: 'recovery', // recovery category contributes to recovery levels (max 6 across Act I)
+    description: 'Nitrogen gas thruster pods along the interstage for rapid attitude correction during descent.',
     costScience: 35,
     level: 0,
     maxLevel: 3,

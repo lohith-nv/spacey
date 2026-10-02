@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import type { RocketModel, TechUpgrade } from '../../types/game';
 import { sounds } from '../../utils/audio';
-import { ArrowLeft, ArrowRight, Flame, ShieldAlert, Award, Waves } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Flame, ShieldAlert, Award, Waves, AlertTriangle } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface BoosterLandingProps {
   rocket: RocketModel;
   techTree: TechUpgrade[];
-  onLandingComplete: (success: boolean, condition: number) => void;
+  onLandingComplete: (success: boolean, condition: number, isHardLanding?: boolean) => void;
 }
 
 interface Particle {
@@ -32,6 +32,7 @@ export const BoosterLandingCanvas: React.FC<BoosterLandingProps> = ({
   // Tech upgrades bonuses
   const legUpgrade = techTree.find(t => t.id === 'tech-landing-legs');
   const maxSafeVy = 4.2 + (legUpgrade ? legUpgrade.level * legUpgrade.statBonus : 0);
+  const maxHardVy = 7.0;
 
   const gridFinUpgrade = techTree.find(t => t.id === 'tech-grid-fins');
   const steeringMultiplier = 1 + (gridFinUpgrade ? gridFinUpgrade.level * gridFinUpgrade.statBonus : 0);
@@ -45,7 +46,7 @@ export const BoosterLandingCanvas: React.FC<BoosterLandingProps> = ({
   const [horizontalSpeed, setHorizontalSpeed] = useState(0);
   const [tiltDeg, setTiltDeg] = useState(0);
   const [altitudeM, setAltitudeM] = useState(3000);
-  const [gameResult, setGameResult] = useState<'playing' | 'landed' | 'crashed' | 'splashdown'>('playing');
+  const [gameResult, setGameResult] = useState<'playing' | 'landed' | 'hard' | 'crashed' | 'splashdown'>('playing');
 
   // Input states
   const keysPressed = useRef<{ left: boolean; right: boolean; thrust: boolean }>({
@@ -73,18 +74,18 @@ export const BoosterLandingCanvas: React.FC<BoosterLandingProps> = ({
   const particles = useRef<Particle[]>([]);
   const finishedRef = useRef(false);
 
-  // Mobile haptics helper
-  const triggerHaptic = (ms = 25) => {
-    try {
-      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+  // Haptic feedback helper for mobile
+  const triggerHaptic = (ms: number = 30) => {
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      try {
         navigator.vibrate(ms);
+      } catch {
+        // silent
       }
-    } catch {
-      // ignore
     }
   };
 
-  // Keyboard listeners
+  // Setup keyboard event listeners
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
@@ -120,7 +121,7 @@ export const BoosterLandingCanvas: React.FC<BoosterLandingProps> = ({
     };
   }, []);
 
-  const triggerOutcome = useCallback((outcome: 'landed' | 'crashed' | 'splashdown', condition: number) => {
+  const triggerOutcome = useCallback((outcome: 'landed' | 'hard' | 'crashed' | 'splashdown', condition: number) => {
     if (finishedRef.current) return;
     finishedRef.current = true;
     setGameResult(outcome);
@@ -139,13 +140,19 @@ export const BoosterLandingCanvas: React.FC<BoosterLandingProps> = ({
         // silent
       }
       setTimeout(() => {
-        onLandingComplete(true, condition);
+        onLandingComplete(true, condition, false);
+      }, 2500);
+    } else if (outcome === 'hard') {
+      sounds.playSuccess();
+      triggerHaptic(100);
+      setTimeout(() => {
+        onLandingComplete(true, 25, true);
       }, 2500);
     } else {
       sounds.playExplosion();
       triggerHaptic(150);
       setTimeout(() => {
-        onLandingComplete(false, 0);
+        onLandingComplete(false, 0, false);
       }, 2500);
     }
   }, [onLandingComplete]);
@@ -168,83 +175,106 @@ export const BoosterLandingCanvas: React.FC<BoosterLandingProps> = ({
 
     // Initialize randomized initial conditions once
     if (!boosterState.current.initialized) {
-      boosterState.current.x = droneShipX + (Math.random() - 0.5) * 120;
-      boosterState.current.vx = (Math.random() - 0.5) * 1.6;
-      boosterState.current.angle = (Math.random() - 0.5) * 0.12;
       boosterState.current.initialized = true;
+      boosterState.current.x = worldWidth / 2 + (Math.random() - 0.5) * 80;
+      boosterState.current.y = 80;
+      boosterState.current.vx = (Math.random() - 0.5) * 0.8;
+      boosterState.current.vy = 1.6;
+      boosterState.current.angle = (Math.random() - 0.5) * 0.12;
+      boosterState.current.fuel = 100;
+      sounds.startEngine(0.01);
     }
 
-    const render = () => {
-      // Responsive DPR handling
-      const container = containerRef.current;
-      if (container) {
-        const rect = container.getBoundingClientRect();
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const targetW = Math.round(rect.width * dpr);
-        const targetH = Math.round(rect.height * dpr);
+    const state = boosterState.current;
 
-        if (canvas.width !== targetW || canvas.height !== targetH) {
-          canvas.width = targetW;
-          canvas.height = targetH;
-        }
+    const render = () => {
+      // High-DPI canvas sizing
+      const displayW = canvas.clientWidth;
+      const displayH = canvas.clientHeight;
+      const dpr = window.devicePixelRatio || 1;
+
+      if (canvas.width !== displayW * dpr || canvas.height !== displayH * dpr) {
+        canvas.width = displayW * dpr;
+        canvas.height = displayH * dpr;
       }
 
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const displayW = canvas.width / dpr;
-      const displayH = canvas.height / dpr;
-
-      const state = boosterState.current;
-      const keys = keysPressed.current;
-
-      // PHYSICS UPDATE
+      // PHYSICS UPDATE IF PLAYING
       if (!finishedRef.current) {
-        // Steering
-        const torque = 0.0038 * steeringMultiplier;
-        if (keys.left) {
-          state.angularVelocity -= torque;
-          state.gimbalAngle = Math.min(0.2, state.gimbalAngle + 0.04);
-        } else if (keys.right) {
-          state.angularVelocity += torque;
-          state.gimbalAngle = Math.max(-0.2, state.gimbalAngle - 0.04);
-        } else {
-          state.gimbalAngle *= 0.85;
+        // Handle RCS Steering Input
+        const rcsPower = 0.0035 * steeringMultiplier;
+        if (keysPressed.current.left) {
+          state.angularVelocity -= rcsPower;
+          state.vx -= 0.04;
+          // Spawn cold-gas RCS particles from top right
+          particles.current.push({
+            x: state.x + Math.sin(state.angle) * 35 + 8,
+            y: state.y - Math.cos(state.angle) * 35,
+            vx: 3 + Math.random() * 2,
+            vy: (Math.random() - 0.5) * 1.5,
+            life: 0,
+            maxLife: 15,
+            size: 2,
+            color: 'rgba(255, 255, 255, 0.7)',
+          });
+        }
+        if (keysPressed.current.right) {
+          state.angularVelocity += rcsPower;
+          state.vx += 0.04;
+          // Spawn cold-gas RCS particles from top left
+          particles.current.push({
+            x: state.x - Math.sin(state.angle) * 35 - 8,
+            y: state.y - Math.cos(state.angle) * 35,
+            vx: -3 - Math.random() * 2,
+            vy: (Math.random() - 0.5) * 1.5,
+            life: 0,
+            maxLife: 15,
+            size: 2,
+            color: 'rgba(255, 255, 255, 0.7)',
+          });
         }
 
-        // Aerodynamic self-righting damping
-        state.angularVelocity += -state.angle * 0.016;
-        state.angularVelocity *= 0.92;
+        // Natural aerodynamic damping & stabilizing torque from grid fins
+        state.angularVelocity *= 0.94;
         state.angle += state.angularVelocity;
+        state.angle *= 0.985; // Aerodynamic self-righting
 
-        // Thrust
+        // Main Retro Engine Throttle
         const hasFuel = state.fuel > 0;
-        const targetThrottle = keys.thrust && hasFuel ? 1.0 : 0;
-        state.throttle += (targetThrottle - state.throttle) * 0.28;
-
-        if (state.throttle > 0.05) {
-          sounds.startEngine(state.throttle);
-          state.fuel = Math.max(0, state.fuel - 0.23);
+        if (keysPressed.current.thrust && hasFuel) {
+          state.throttle = Math.min(1.0, state.throttle + 0.15);
+          state.fuel = Math.max(0, state.fuel - 0.22);
           setFuel(Math.round(state.fuel));
+        } else {
+          state.throttle = Math.max(0, state.throttle - 0.12);
+        }
 
-          // Thrust vector with engine gimbal
-          const effectiveAngle = state.angle + state.gimbalAngle;
-          const thrustPower = (0.245 * (rocket.engineThrust / 50)) * state.throttle;
-          state.vx += Math.sin(effectiveAngle) * thrustPower;
-          state.vy -= Math.cos(effectiveAngle) * thrustPower;
+        // Apply engine thrust vector
+        if (state.throttle > 0.01) {
+          const thrust = state.throttle * 0.078;
+          state.vx += Math.sin(state.angle) * thrust * 0.9;
+          state.vy -= Math.cos(state.angle) * thrust;
 
-          // Exhaust flame particles
-          const exhaustX = state.x - Math.sin(state.angle) * 36;
-          const exhaustY = state.y + Math.cos(state.angle) * 36;
+          sounds.updateEngineThrottle(state.throttle);
 
-          for (let i = 0; i < 3; i++) {
+          // Spawn retro rocket exhaust particles
+          const exhaustCount = Math.round(state.throttle * 4);
+          for (let i = 0; i < exhaustCount; i++) {
+            const spread = (Math.random() - 0.5) * 0.4;
+            const pSpeed = 6 + Math.random() * 8;
             particles.current.push({
-              x: exhaustX + (Math.random() - 0.5) * 5,
-              y: exhaustY + (Math.random() - 0.5) * 5,
-              vx: -Math.sin(effectiveAngle) * (6 + Math.random() * 5) + (Math.random() - 0.5) * 1.8,
-              vy: Math.cos(effectiveAngle) * (6 + Math.random() * 5) + (Math.random() - 0.5) * 1.8,
-              life: 1,
-              maxLife: 22 + Math.random() * 16,
-              size: 5 + Math.random() * 7,
-              color: Math.random() > 0.35 ? '#f59e0b' : '#ef4444',
+              x: state.x - Math.sin(state.angle) * 35,
+              y: state.y + Math.cos(state.angle) * 35,
+              vx: state.vx - Math.sin(state.angle + spread) * pSpeed * 0.5,
+              vy: state.vy + Math.cos(state.angle + spread) * pSpeed,
+              life: 0,
+              maxLife: 20 + Math.random() * 15,
+              size: 4 + Math.random() * 4,
+              color:
+                Math.random() > 0.4
+                  ? 'rgba(251, 146, 60, 0.85)'
+                  : Math.random() > 0.2
+                  ? 'rgba(254, 215, 170, 0.9)'
+                  : 'rgba(239, 68, 68, 0.7)',
             });
           }
         } else {
@@ -287,13 +317,17 @@ export const BoosterLandingCanvas: React.FC<BoosterLandingProps> = ({
             state.x <= droneShipX + droneShipWidth / 2 - 8;
 
           const safeVertical = state.vy <= maxSafeVy;
+          const hardLandingVertical = state.vy > maxSafeVy && state.vy <= maxHardVy;
           const safeHorizontal = Math.abs(state.vx) <= 2.2;
           const safeTilt = Math.abs(state.angle) * (180 / Math.PI) <= 6.5;
 
           if (onDroneShip && safeVertical && safeHorizontal && safeTilt) {
-            // Touchdown success! Calculate integrity
+            // Nominal Touchdown success! Calculate integrity
             const condition = Math.round(98 - (state.vy / maxSafeVy) * 14);
             triggerOutcome('landed', condition);
+          } else if (onDroneShip && hardLandingVertical && safeHorizontal && safeTilt) {
+            // Hard Landing! 4.2 to 7.0 m/s saves the core at 25% condition (70% refurbish cost)
+            triggerOutcome('hard', 25);
           } else if (onDroneShip) {
             triggerOutcome('crashed', 0);
           } else {
@@ -318,228 +352,151 @@ export const BoosterLandingCanvas: React.FC<BoosterLandingProps> = ({
 
       // Center camera between rocket and deck
       const camTargetX = state.x * 0.5 + droneShipX * 0.5;
-      const camTargetY = state.y * 0.6 + deckY * 0.4;
+      const camTargetY = Math.min(deckY, state.y * 0.6 + deckY * 0.4);
 
       ctx.save();
       ctx.translate(displayW / 2, displayH / 2);
       ctx.scale(scale * dynamicZoom, scale * dynamicZoom);
       ctx.translate(-camTargetX, -camTargetY);
 
-      // 1. Sky Gradient (Atmosphere transition)
-      const skyGrad = ctx.createLinearGradient(0, -200, 0, deckY);
-      skyGrad.addColorStop(0, '#020617');
-      skyGrad.addColorStop(0.4, '#0b1329');
-      skyGrad.addColorStop(0.8, '#0f1f3d');
-      skyGrad.addColorStop(1, '#1e293b');
-      ctx.fillStyle = skyGrad;
-      ctx.fillRect(-worldWidth, -300, worldWidth * 3, worldHeight * 2);
+      // 1. Sky & Ocean Background
+      const skyGradient = ctx.createLinearGradient(0, 0, 0, worldHeight);
+      skyGradient.addColorStop(0, '#020617'); // Space black/deep navy
+      skyGradient.addColorStop(0.65, '#0f172a');
+      skyGradient.addColorStop(0.88, '#1e293b');
+      skyGradient.addColorStop(0.92, '#0c4a6e'); // Ocean horizon
+      skyGradient.addColorStop(1, '#082f49');
+      ctx.fillStyle = skyGradient;
+      ctx.fillRect(-200, 0, worldWidth + 400, worldHeight);
 
-      // Distant stars / atmospheric particles
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-      for (let i = 0; i < 30; i++) {
-        const sx = ((i * 73) % (worldWidth * 2)) - worldWidth / 2;
-        const sy = ((i * 47) % 350) - 200;
-        ctx.fillRect(sx, sy, 1.5, 1.5);
+      // Stars in upper sky
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+      for (let s = 0; s < 30; s++) {
+        const starX = (s * 47) % worldWidth;
+        const starY = (s * 31) % 400;
+        ctx.fillRect(starX, starY, 1.5, 1.5);
       }
 
-      // 2. Distant Clouds passing upwards (Parallax)
-      const cloudOffset = (Date.now() / 40) % 600;
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
-      for (let c = 0; c < 4; c++) {
-        const cy = 200 - cloudOffset + c * 180;
-        ctx.beginPath();
-        ctx.arc(worldWidth / 2 - 120 + c * 90, cy, 65, 0, Math.PI * 2);
-        ctx.arc(worldWidth / 2 - 70 + c * 90, cy - 15, 80, 0, Math.PI * 2);
-        ctx.arc(worldWidth / 2 - 20 + c * 90, cy, 60, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      // 3. Ocean Surface & Waves
-      const oceanGrad = ctx.createLinearGradient(0, deckY, 0, worldHeight + 200);
-      oceanGrad.addColorStop(0, '#0369a1');
-      oceanGrad.addColorStop(0.3, '#082f49');
-      oceanGrad.addColorStop(1, '#020617');
-      ctx.fillStyle = oceanGrad;
-      ctx.fillRect(-worldWidth, deckY, worldWidth * 3, worldHeight);
-
-      // Dynamic animated wave layers
-      const time = Date.now() / 200;
-      ctx.fillStyle = 'rgba(56, 189, 248, 0.6)';
-      for (let i = -worldWidth; i < worldWidth * 2; i += 28) {
-        const waveY = deckY + Math.sin(i * 0.05 + time) * 3 + 1;
-        ctx.fillRect(i, waveY, 16, 2);
-      }
-
-      // 4. Drone Ship ("Of Course I Still Love You")
-      const shipWaveY = deckY + Math.sin(Date.now() / 450) * 1.8;
-      const shipLeft = droneShipX - droneShipWidth / 2;
-
-      // Drone Ship Floodlight Cones
-      ctx.save();
-      const floodGrad = ctx.createLinearGradient(droneShipX, shipWaveY, droneShipX, shipWaveY - 180);
-      floodGrad.addColorStop(0, 'rgba(56, 189, 248, 0.18)');
-      floodGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
-      ctx.fillStyle = floodGrad;
+      // Animated ocean waves
+      ctx.fillStyle = '#0369a1';
       ctx.beginPath();
-      ctx.moveTo(droneShipX - 45, shipWaveY);
-      ctx.lineTo(droneShipX - 110, shipWaveY - 180);
-      ctx.lineTo(droneShipX + 110, shipWaveY - 180);
-      ctx.lineTo(droneShipX + 45, shipWaveY);
+      ctx.moveTo(-200, deckY + 8);
+      const waveT = Date.now() / 900;
+      for (let wx = -200; wx <= worldWidth + 200; wx += 40) {
+        ctx.lineTo(wx, deckY + 8 + Math.sin(wx * 0.03 + waveT) * 3);
+      }
+      ctx.lineTo(worldWidth + 200, worldHeight);
+      ctx.lineTo(-200, worldHeight);
       ctx.closePath();
       ctx.fill();
-      ctx.restore();
 
-      // Drone Ship Hull
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(shipLeft, shipWaveY - 8, droneShipWidth, 18);
-      ctx.strokeStyle = '#334155';
+      // 2. Autonomous Spaceport Drone Ship (ASDS) Platform
+      const shipLeft = droneShipX - droneShipWidth / 2;
+      const shipTop = deckY;
+      const shipH = 22;
+
+      // Drone ship barge hull
+      ctx.fillStyle = '#1e293b';
+      ctx.strokeStyle = '#475569';
       ctx.lineWidth = 2;
-      ctx.strokeRect(shipLeft, shipWaveY - 8, droneShipWidth, 18);
+      ctx.beginPath();
+      ctx.roundRect(shipLeft, shipTop, droneShipWidth, shipH, [3, 3, 6, 6]);
+      ctx.fill();
+      ctx.stroke();
 
-      // Yellow Perimeter Warning Stripes
+      // Yellow chevron warning stripes along deck edge
       ctx.fillStyle = '#eab308';
-      for (let s = shipLeft + 4; s < shipLeft + droneShipWidth - 8; s += 20) {
-        ctx.fillRect(s, shipWaveY - 7, 8, 3);
+      for (let sx = shipLeft + 4; sx < shipLeft + droneShipWidth - 8; sx += 16) {
+        ctx.fillRect(sx, shipTop, 8, 3);
       }
 
-      // Landing Target Circle [ X ]
-      ctx.strokeStyle = '#06b6d4';
+      // ASDS Deck Landing Bullseye / Logo
+      ctx.strokeStyle = '#38bdf8';
       ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.arc(droneShipX, shipWaveY, 26, 0, Math.PI * 2);
+      ctx.arc(droneShipX, shipTop + shipH / 2, 24, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Bullseye Crosshair X
-      ctx.strokeStyle = '#38bdf8';
+      ctx.strokeStyle = '#f8fafc';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(droneShipX - 12, shipWaveY - 12);
-      ctx.lineTo(droneShipX + 12, shipWaveY + 12);
-      ctx.moveTo(droneShipX + 12, shipWaveY - 12);
-      ctx.lineTo(droneShipX - 12, shipWaveY + 12);
+      ctx.arc(droneShipX, shipTop + shipH / 2, 10, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Drone Ship Title
-      ctx.fillStyle = '#cbd5e1';
-      ctx.font = 'bold 9px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('OF COURSE I STILL LOVE YOU', droneShipX, shipWaveY + 22);
+      // ASDS Crosshairs
+      ctx.beginPath();
+      ctx.moveTo(droneShipX - 32, shipTop + shipH / 2);
+      ctx.lineTo(droneShipX + 32, shipTop + shipH / 2);
+      ctx.stroke();
 
-      // 5. Landing Trajectory Predictor Line
-      if (!finishedRef.current) {
-        ctx.save();
-        ctx.setLineDash([4, 4]);
-        ctx.strokeStyle = 'rgba(34, 211, 238, 0.4)';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(state.x, state.y);
-        const projectedLandingX = state.x + state.vx * ((deckY - state.y) / Math.max(1, state.vy));
-        ctx.lineTo(projectedLandingX, deckY);
-        ctx.stroke();
-
-        // Projected Impact Marker
-        ctx.fillStyle = 'rgba(34, 211, 238, 0.8)';
-        ctx.beginPath();
-        ctx.arc(projectedLandingX, deckY, 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
-
-      // 6. Particles (Exhaust, Water Spray, Sparks)
+      // 3. Render Particles (Exhaust & RCS)
       for (let i = particles.current.length - 1; i >= 0; i--) {
         const p = particles.current[i];
         p.x += p.vx;
         p.y += p.vy;
         p.life++;
-        const alpha = Math.max(0, 1 - p.life / p.maxLife);
 
-        ctx.save();
-        ctx.fillStyle = p.color;
-        ctx.globalAlpha = alpha;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size * (1 + p.life / 12), 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-
-        if (p.life >= p.maxLife) {
+        const alpha = 1 - p.life / p.maxLife;
+        if (alpha <= 0) {
           particles.current.splice(i, 1);
+          continue;
         }
+
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+        ctx.fill();
       }
 
-      // 7. Booster Rocket Rendering
+      // 4. Render First-Stage Rocket Booster
       ctx.save();
       ctx.translate(state.x, state.y);
       ctx.rotate(state.angle);
 
-      const rocketW = 14;
-      const rocketH = 72;
+      const rocketW = 18;
+      const rocketH = 70;
 
-      // Booster Body (Falcon 9 style white with re-entry soot gradient)
-      const bodyGrad = ctx.createLinearGradient(-rocketW / 2, 0, rocketW / 2, 0);
-      bodyGrad.addColorStop(0, '#cbd5e1');
-      bodyGrad.addColorStop(0.5, '#f8fafc');
-      bodyGrad.addColorStop(1, '#94a3b8');
-      ctx.fillStyle = bodyGrad;
+      // Booster Main Body (cylindrical carbon-composite core)
+      const boosterGrad = ctx.createLinearGradient(-rocketW / 2, 0, rocketW / 2, 0);
+      boosterGrad.addColorStop(0, '#cbd5e1');
+      boosterGrad.addColorStop(0.5, '#f8fafc');
+      boosterGrad.addColorStop(1, '#94a3b8');
+      ctx.fillStyle = boosterGrad;
       ctx.fillRect(-rocketW / 2, -rocketH / 2, rocketW, rocketH);
 
-      // Re-entry Soot weathering
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
-      ctx.fillRect(-rocketW / 2, 0, rocketW, rocketH / 2);
-
-      // Carbon Interstage at Top
+      // Interstage black band at top
       ctx.fillStyle = '#0f172a';
       ctx.fillRect(-rocketW / 2, -rocketH / 2, rocketW, 14);
 
-      // Titanium Grid Fins (Top - Actuate with Steering)
+      // Falcon / Spacey vertical logo
       ctx.fillStyle = '#334155';
-      const finTilt = keys.left ? -4 : keys.right ? 4 : 0;
-      // Left fin
-      ctx.fillRect(-rocketW / 2 - 9, -rocketH / 2 + 10 + finTilt, 9, 4);
-      // Right fin
-      ctx.fillRect(rocketW / 2, -rocketH / 2 + 10 - finTilt, 9, 4);
-
-      // Cold Gas RCS Thruster Puffs (White nitrogen gas jets)
-      if (keys.left) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-        ctx.beginPath();
-        ctx.arc(-rocketW / 2 - 12, -rocketH / 2 + 8, 4.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      if (keys.right) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-        ctx.beginPath();
-        ctx.arc(rocketW / 2 + 12, -rocketH / 2 + 8, 4.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      // Center Engine Bell with Gimbal
+      ctx.font = 'bold 7px monospace';
+      ctx.textAlign = 'center';
       ctx.save();
-      ctx.translate(0, rocketH / 2);
-      ctx.rotate(state.gimbalAngle);
+      ctx.rotate(Math.PI / 2);
+      ctx.fillText(rocket.name.toUpperCase(), 0, 3);
+      ctx.restore();
 
-      ctx.fillStyle = '#1e293b';
+      // Grid Fins (deployable at interstage)
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(-rocketW / 2 - 7, -rocketH / 2 + 10, 7, 3);
+      ctx.fillRect(rocketW / 2, -rocketH / 2 + 10, 7, 3);
+
+      // Rocket Engine Bell Nozzle
+      ctx.fillStyle = '#475569';
       ctx.beginPath();
-      ctx.moveTo(-4, 0);
-      ctx.lineTo(4, 0);
-      ctx.lineTo(5, 7);
-      ctx.lineTo(-5, 7);
+      ctx.moveTo(-rocketW / 2 + 3, rocketH / 2);
+      ctx.lineTo(rocketW / 2 - 3, rocketH / 2);
+      ctx.lineTo(rocketW / 2 - 1, rocketH / 2 + 8);
+      ctx.lineTo(-rocketW / 2 + 1, rocketH / 2 + 8);
       ctx.closePath();
       ctx.fill();
 
-      // Engine Nozzle Glow when firing
-      if (state.throttle > 0.05) {
-        ctx.fillStyle = '#38bdf8';
-        ctx.beginPath();
-        ctx.arc(0, 7, 3, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.restore();
-
-      // Deployable Carbon Fiber Landing Legs
+      // Landing Legs (carbon-fiber A-frames)
       if (state.legsDeployed) {
         const ext = state.legsExtension;
         ctx.strokeStyle = '#1e293b';
-        ctx.lineWidth = 3.5;
+        ctx.lineWidth = 2.5;
 
         // Left Leg
         ctx.beginPath();
@@ -598,7 +555,11 @@ export const BoosterLandingCanvas: React.FC<BoosterLandingProps> = ({
           <div className="bg-slate-900 border border-slate-800 px-2 py-1 rounded-lg text-center">
             <div className="text-[9px] text-slate-400">DESCENT (Vy)</div>
             <div className={`font-bold font-mono-numbers text-xs sm:text-sm ${
-              verticalSpeed > maxSafeVy ? 'text-rose-400 animate-pulse' : 'text-emerald-400'
+              verticalSpeed > maxHardVy
+                ? 'text-rose-400 animate-pulse'
+                : verticalSpeed > maxSafeVy
+                ? 'text-amber-400'
+                : 'text-emerald-400'
             }`}>
               {verticalSpeed} m/s
             </div>
@@ -608,7 +569,7 @@ export const BoosterLandingCanvas: React.FC<BoosterLandingProps> = ({
           <div className="bg-slate-900 border border-slate-800 px-2 py-1 rounded-lg text-center">
             <div className="text-[9px] text-slate-400">DRIFT (Vx)</div>
             <div className={`font-bold font-mono-numbers text-xs sm:text-sm ${
-              horizontalSpeed > 2.0 ? 'text-rose-400' : 'text-emerald-400'
+              horizontalSpeed > 2.2 ? 'text-rose-400' : 'text-emerald-400'
             }`}>
               {horizontalSpeed} m/s
             </div>
@@ -618,7 +579,7 @@ export const BoosterLandingCanvas: React.FC<BoosterLandingProps> = ({
           <div className="bg-slate-900 border border-slate-800 px-2 py-1 rounded-lg text-center">
             <div className="text-[9px] text-slate-400">TILT</div>
             <div className={`font-bold font-mono-numbers text-xs sm:text-sm ${
-              tiltDeg > 6.0 ? 'text-rose-400' : 'text-emerald-400'
+              tiltDeg > 6.5 ? 'text-rose-400' : 'text-emerald-400'
             }`}>
               {tiltDeg}°
             </div>
@@ -653,7 +614,7 @@ export const BoosterLandingCanvas: React.FC<BoosterLandingProps> = ({
 
         {/* Safe thresholds pill */}
         <div className="absolute top-3 right-3 bg-slate-950/85 border border-slate-800 px-2.5 py-1 rounded-lg font-mono text-[10px] text-slate-400 backdrop-blur-md hidden sm:block">
-          Safe Limit: Vy &lt; {maxSafeVy.toFixed(1)} m/s • Tilt &lt; 6°
+          Nominal: Vy &lt; {maxSafeVy.toFixed(1)} m/s &bull; Hard: 4.2–7.0 m/s &bull; Tilt &le; 6.5°
         </div>
 
         {/* Outcome Overlay Banner */}
@@ -671,6 +632,18 @@ export const BoosterLandingCanvas: React.FC<BoosterLandingProps> = ({
                   Precision landing on the drone ship deck. Booster secured for recovery and discounted re-flight!
                 </p>
               </div>
+            ) : gameResult === 'hard' ? (
+              <div className="space-y-2.5 max-w-sm">
+                <div className="w-14 h-14 rounded-full bg-amber-500/20 border border-amber-500/50 mx-auto flex items-center justify-center text-amber-400 shadow-xl shadow-amber-500/20">
+                  <AlertTriangle className="w-7 h-7" />
+                </div>
+                <h3 className="text-xl sm:text-2xl font-extrabold text-white">
+                  HARD TOUCHDOWN CONFIRMED! ⚠️
+                </h3>
+                <p className="text-amber-300 font-mono text-xs">
+                  Booster survived hard landing (4.2–7.0 m/s) on deck at 25% integrity. Core salvaged; heavy refurbishment required (70% build cost).
+                </p>
+              </div>
             ) : gameResult === 'crashed' ? (
               <div className="space-y-2.5 max-w-sm">
                 <div className="w-14 h-14 rounded-full bg-rose-500/20 border border-rose-500/50 mx-auto flex items-center justify-center text-rose-400 shadow-xl shadow-rose-500/20">
@@ -680,7 +653,7 @@ export const BoosterLandingCanvas: React.FC<BoosterLandingProps> = ({
                   HARD IMPACT (RUD)
                 </h3>
                 <p className="text-rose-300 font-mono text-xs">
-                  Booster exceeded structural touchdown velocity or tilt limit. Telemetry gathered for R&D.
+                  Booster exceeded structural touchdown velocity (&gt;7.0 m/s) or tilt limit (&gt;6.5°). Telemetry gathered for R&D.
                 </p>
               </div>
             ) : (

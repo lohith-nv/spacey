@@ -59,12 +59,17 @@ export interface BoosterInventoryItem {
   flightsCompleted: number;
   condition: number; // 0-100%
   refurbished: boolean;
+  isHardLanding?: boolean;
+  refurbCostMultiplier?: number; // 0.70 for hard landing
 }
 
 export interface MissionStats {
   totalLaunches: number;
   successfulOrbits: number;
   boostersLanded: number;
+  manualLandingsCount: number; // 3 manual landings unlock ARIA auto-land
+  autoLandingsCount?: number;
+  hardLandingsCount?: number;
   totalEarnings: number; // Cr
   totalSavings: number; // Cr
 }
@@ -75,6 +80,7 @@ export interface ActiveMission {
   rocket: RocketModel;
   usedBoosterId?: string;
   phase: 'countdown' | 'ascent' | 'meco' | 'landing' | 'debrief';
+  isAutoLand?: boolean;
 }
 
 export interface AriaTierInfo {
@@ -94,4 +100,23 @@ export interface KoshaDepot {
   currentPropellantKg: number;
   iceSupplyEstablished: boolean; // self-sustaining from Moon/Belt ice
   refurbishmentBayOnline: boolean;
+}
+
+export interface BridgeLoan {
+  active: boolean;
+  principal: number;
+  payoutsRemaining: number;
+  withholdingPercent: number;
+  actTaken: number;
+}
+
+export interface MissionOutcome {
+  orbitSuccess: boolean;
+  boosterLanded: boolean;
+  boosterCondition: number;
+  isHardLanding?: boolean;
+  isAutoLand?: boolean;
+  ascentFailed?: boolean;
+  stagesRecovered?: number;
+  totalStages?: number;
 }
