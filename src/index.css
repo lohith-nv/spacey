@@ -41,3 +41,49 @@
     transform: rotate(360deg);
   }
 }
+
+/* Twinkling starfield for the command hero banner */
+@keyframes twinkle {
+  0%, 100% {
+    opacity: 0.12;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+.animate-twinkle {
+  animation: twinkle 3s ease-in-out infinite;
+}
+
+/* Slow hovering drift for the hero rocket */
+@keyframes hover-drift {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-16px);
+  }
+}
+
+.animate-hover-drift {
+  animation: hover-drift 6s ease-in-out infinite;
+}
+
+/* Pulsing engine exhaust glow under the hero rocket */
+@keyframes exhaust-pulse {
+  0%, 100% {
+    opacity: 0.35;
+    transform: translateX(-50%) scaleX(0.8);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translateX(-50%) scaleX(1.2);
+  }
+}
+
+.animate-exhaust-pulse {
+  animation: exhaust-pulse 1.6s ease-in-out infinite;
+}

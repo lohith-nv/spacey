@@ -90,6 +90,8 @@ export const HQView: React.FC<HQViewProps> = ({
             passiveRate={passiveRate}
             cash={cash}
             science={science}
+            contracts={contracts}
+            rockets={rockets}
             onNavigateToContracts={() => setActiveTab('contracts')}
           />
         )}
